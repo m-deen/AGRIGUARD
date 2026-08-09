@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriGuard - My Animals</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        /* Navbar */
+        .navbar {
+            background: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1D9E75;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-links a {
+            text-decoration: none;
+            color: #374151;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .nav-links a:hover {
+            background: #f3f4f6;
+        }
+        
+        .nav-links a.active {
+            background: #1D9E75;
+            color: white;
+            border: 2px solid #0f6e56;
+        }
+        
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .header p {
+            color: #6b7280;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        
+        /* Stats Row */
+        .stats-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-box {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1D9E75;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            background: #1D9E75;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background: #0f6e56;
+            transform: translateY(-1px);
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .btn-view {
+            background: #f3f4f6;
+            color: #374151;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 8px;
+            transition: all 0.2s;
+        }
+        
+        .btn-view:hover {
+            background: #e5e7eb;
+        }
+        
+        /* Card */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 0;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        /* Table */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 14px 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        th {
+            font-weight: 600;
+            color: #374151;
+            background: #f9fafb;
+            font-size: 13px;
+        }
+        
+        td {
+            font-size: 14px;
+        }
+        
+        tr:hover {
+            background: #f9fafb;
+        }
+        
+        /* Badges */
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .badge-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-sold {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .badge-deceased {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .modal-header h2 {
+            font-size: 20px;
+            color: #111827;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #9ca3af;
+        }
+        
+        .close-modal:hover {
+            color: #374151;
+        }
+        
+        /* Form */
+        .form-group {
+            margin-bottom: 18px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 13px;
+        }
+        
+        .form-group label .required {
+            color: #ef4444;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #1D9E75;
+            box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.1);
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 50px;
+            color: #6b7280;
+        }
+        
+        .empty-state a {
+            color: #1D9E75;
+            text-decoration: none;
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #1D9E75;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .toast.error {
+            background: #ef4444;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            .nav-links {
+                justify-content: center;
+            }
+            th, td {
+                padding: 10px 8px;
+                font-size: 12px;
+            }
+            .stats-row {
+                flex-direction: column;
+            }
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">🌾 AgriGuard</div>
+        <div class="nav-links">
+            <a href="dashboard.html">📊 Dashboard</a>
+            <a href="animals.html" class="active">🐄 My Animals</a>
+            <a href="add-animal.html">➕ Add Animal</a>
+            <a href="vaccinations.html">💉 Vaccinations</a>
+            <a href="health.html">🏥 Health</a>
+            <a href="tracking.html">📍 Tracking</a>
+            <a href="auctions.html">💰 Auctions</a>
+            <a href="chat-bot.html">🤖 AI Chat</a>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>🐄 My Livestock</h1>
+                <p>Manage and track all your animals</p>
+            </div>
+            <button class="btn-primary" onclick="openAddModal()">➕ Add New Animal</button>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="stat-number" id="totalCount">0</div>
+                <div class="stat-label">Total Animals</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="cattleCount">0</div>
+                <div class="stat-label">🐄 Cattle</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="goatCount">0</div>
+                <div class="stat-label">🐐 Goats</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="sheepCount">0</div>
+                <div class="stat-label">🐑 Sheep</div>
+            </div>
+        </div>
+
+        <!-- Animals Table -->
+        <div class="card">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tag ID</th>
+                            <th>Species</th>
+                            <th>Breed</th>
+                            <th>Gender</th>
+                            <th>Weight</th>
+                            <th>Age</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="animalsTable">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px;">
+                                <div class="empty-state">Loading animals... <div class="spinner"></div></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Animal Modal -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>➕ Add New Animal</h2>
+                <button class="close-modal" onclick="closeAddModal()">&times;</button>
+            </div>
+            <form id="addAnimalForm">
+                <div class="form-group">
+                    <label>Ear Tag ID <span class="required">*</span></label>
+                    <input type="text" id="animalTag" required placeholder="e.g., AG-001">
+                </div>
+                <div class="form-group">
+                    <label>Species <span class="required">*</span></label>
+                    <select id="species" required>
+                        <option value="">Select species</option>
+                        <option value="Cattle">🐄 Cattle</option>
+                        <option value="Goat">🐐 Goat</option>
+                        <option value="Sheep">🐑 Sheep</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Breed</label>
+                    <input type="text" id="breed" placeholder="e.g., Angus, Nguni">
+                </div>
+                <div class="form-group">
+                    <label>Gender</label>
+                    <select id="gender">
+                        <option value="">Select</option>
+                        <option value="Male">♂ Male</option>
+                        <option value="Female">♀ Female</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Weight (kg)</label>
+                    <input type="number" id="weight" step="0.01" placeholder="e.g., 450">
+                </div>
+                <div class="form-group">
+                    <label>Date of Birth</label>
+                    <input type="date" id="dateOfBirth">
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Add Animal</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+        
+        function getToken() { return localStorage.getItem('agriguard_token'); }
+        
+        function getUser() { 
+            const user = localStorage.getItem('agriguard_user');
+            return user ? JSON.parse(user) : null;
+        }
+        
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${isError ? 'error' : ''}`;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+        
+        function logout() {
+            localStorage.removeItem('agriguard_token');
+            localStorage.removeItem('agriguard_user');
+            localStorage.removeItem('agriguard_role');
+            window.location.href = '../login.html';
+        }
+        
+        function requireLogin() {
+            if (!getToken()) {
+                window.location.href = '../login.html';
+            }
+            const user = getUser();
+            if (user && user.role !== 'farmer' && user.role !== 'admin') {
+                showToast('Access denied. Farmers only.', true);
+                setTimeout(() => window.location.href = 'dashboard.html', 2000);
+            }
+        }
+        
+        function updateStats(animals) {
+            const total = animals.length;
+            const cattle = animals.filter(a => a.species === 'Cattle').length;
+            const goats = animals.filter(a => a.species === 'Goat').length;
+            const sheep = animals.filter(a => a.species === 'Sheep').length;
+            
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('cattleCount').textContent = cattle;
+            document.getElementById('goatCount').textContent = goats;
+            document.getElementById('sheepCount').textContent = sheep;
+        }
+        
+        function calculateAge(birthDate) {
+            if (!birthDate) return '-';
+            const today = new Date();
+            const birth = new Date(birthDate);
+            let age = today.getFullYear() - birth.getFullYear();
+            const m = today.getMonth() - birth.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+                age--;
+            }
+            return age > 0 ? `${age} yrs` : '< 1 yr';
+        }
+        
+        async function loadAnimals() {
+            try {
+                const response = await fetch(`${API_BASE}/api/animals`, {
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                });
+                const result = await response.json();
+                
+                const tbody = document.getElementById('animalsTable');
+                if (result.data && result.data.length > 0) {
+                    updateStats(result.data);
+                    tbody.innerHTML = result.data.map(animal => `
+                        <tr>
+                            <td><strong>${animal.animal_tag}</strong></td>
+                            <td>${animal.species}</td>
+                            <td>${animal.breed || '-'}</td>
+                            <td>${animal.gender || '-'}</td>
+                            <td>${animal.weight_kg ? animal.weight_kg + ' kg' : '-'}</td>
+                            <td>${calculateAge(animal.date_of_birth)}</td>
+                            <td><span class="badge badge-active">${animal.status || 'Active'}</span></td>
+                            <td>
+                                <button class="btn-view" onclick="viewAnimal(${animal.animal_id})">👁 View</button>
+                                <button class="btn-danger" onclick="deleteAnimal(${animal.animal_id})">🗑 Delete</button>
+                            </td>
+                        </table>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = `
+                        <tr><td colspan="8" style="text-align: center; padding: 40px;">
+                            <div class="empty-state">
+                                🐄 No animals yet.<br><br>
+                                <a href="add-animal.html">Click here to add your first animal</a>
+                            </div>
+                        </td></tr>
+                    `;
+                }
+            } catch (error) {
+                console.error('Load animals error:', error);
+                showToast('Error loading animals', true);
+            }
+        }
+        
+        async function addAnimal(event) {
+            event.preventDefault();
+            
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Adding...';
+            
+            const animalData = {
+                animal_tag: document.getElementById('animalTag').value.trim(),
+                species: document.getElementById('species').value,
+                breed: document.getElementById('breed').value,
+                gender: document.getElementById('gender').value,
+                weight_kg: parseFloat(document.getElementById('weight').value) || null,
+                date_of_birth: document.getElementById('dateOfBirth').value || null
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/animals`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getToken()}`
+                    },
+                    body: JSON.stringify(animalData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success' || result.success === true) {
+                    showToast('✅ Animal added successfully!');
+                    closeAddModal();
+                    loadAnimals();
+                    document.getElementById('addAnimalForm').reset();
+                } else {
+                    showToast(result.message || 'Error adding animal', true);
+                }
+            } catch (error) {
+                console.error('Add animal error:', error);
+                showToast('Network error. Make sure Flask is running.', true);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+        
+        function viewAnimal(animalId) {
+            // Future: Open animal details page
+            showToast(`Viewing animal ${animalId} (coming soon)`);
+        }
+        
+        async function deleteAnimal(animalId) {
+            if (!confirm('Are you sure you want to delete this animal? This action cannot be undone.')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/animals/${animalId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success' || result.success === true) {
+                    showToast('Animal deleted successfully');
+                    loadAnimals();
+                } else {
+                    showToast(result.message || 'Error deleting animal', true);
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                showToast('Network error', true);
+            }
+        }
+        
+        function openAddModal() {
+            document.getElementById('addModal').classList.add('show');
+        }
+        
+        function closeAddModal() {
+            document.getElementById('addModal').classList.remove('show');
+            document.getElementById('addAnimalForm').reset();
+        }
+        
+        // Initialize
+        requireLogin();
+        loadAnimals();
+        
+        document.getElementById('addAnimalForm').addEventListener('submit', addAnimal);
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('addModal');
+            if (event.target === modal) {
+                closeAddModal();
+            }
+        }
+    </script>
+</body>
+</html>

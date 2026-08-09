@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriGuard - Vaccination Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        /* Navbar */
+        .navbar {
+            background: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1D9E75;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-links a {
+            text-decoration: none;
+            color: #374151;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .nav-links a:hover {
+            background: #f3f4f6;
+        }
+        
+        .nav-links a.active {
+            background: #1D9E75;
+            color: white;
+            border: 2px solid #0f6e56;
+        }
+        
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        
+        /* Header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .page-header h1 {
+            font-size: 28px;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .page-header p {
+            color: #6b7280;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            background: #1D9E75;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background: #0f6e56;
+            transform: translateY(-1px);
+        }
+        
+        .btn-outline {
+            background: white;
+            color: #1D9E75;
+            border: 1px solid #1D9E75;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .btn-outline:hover {
+            background: #e1f5ee;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1D9E75;
+        }
+        
+        .stat-label {
+            color: #6b7280;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .tab {
+            padding: 10px 24px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 15px;
+            font-weight: 500;
+            color: #6b7280;
+            transition: all 0.2s;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .tab:hover {
+            color: #1D9E75;
+        }
+        
+        .tab.active {
+            color: #1D9E75;
+            border-bottom: 2px solid #1D9E75;
+        }
+        
+        /* Card */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #111827;
+        }
+        
+        /* Table */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        th {
+            font-weight: 600;
+            color: #374151;
+            background: #f9fafb;
+            font-size: 13px;
+        }
+        
+        td {
+            font-size: 14px;
+        }
+        
+        tr:hover {
+            background: #f9fafb;
+        }
+        
+        /* Badges */
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .badge-overdue {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .badge-upcoming {
+            background: #fed7aa;
+            color: #92400e;
+        }
+        
+        .badge-completed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            width: 90%;
+            max-width: 550px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .modal-header h2 {
+            font-size: 20px;
+            color: #111827;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #9ca3af;
+        }
+        
+        .close-modal:hover {
+            color: #374151;
+        }
+        
+        /* Form */
+        .form-group {
+            margin-bottom: 18px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 13px;
+        }
+        
+        .form-group label .required {
+            color: #ef4444;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #1D9E75;
+            box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.1);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #1D9E75;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .toast.error {
+            background: #ef4444;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            .nav-links {
+                justify-content: center;
+            }
+            th, td {
+                padding: 8px;
+                font-size: 12px;
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">🌾 AgriGuard</div>
+        <div class="nav-links">
+            <a href="dashboard.html">📊 Dashboard</a>
+            <a href="animals.html">🐄 My Animals</a>
+            <a href="add-animal.html">➕ Add Animal</a>
+            <a href="vaccinations.html" class="active">💉 Vaccinations</a>
+            <a href="health.html">🏥 Health</a>
+            <a href="tracking.html">📍 Tracking</a>
+            <a href="auctions.html">💰 Auctions</a>
+            <a href="chat-bot.html">🤖 AI Chat</a>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="container">
+        <div class="page-header">
+            <div>
+                <h1>💉 Vaccination Management</h1>
+                <p>Track and manage livestock vaccinations</p>
+            </div>
+            <button class="btn-primary" onclick="openAddModal()">➕ Log Vaccination</button>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalVaccinations">0</div>
+                <div class="stat-label">Total Vaccinations</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="completedCount">0</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="upcomingCount">0</div>
+                <div class="stat-label">Upcoming</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="overdueCount">0</div>
+                <div class="stat-label">Overdue</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('upcoming')">📅 Upcoming</button>
+            <button class="tab" onclick="switchTab('overdue')">⚠️ Overdue</button>
+            <button class="tab" onclick="switchTab('history')">📋 History</button>
+        </div>
+
+        <!-- Content Card -->
+        <div class="card">
+            <div class="card-title" id="tabTitle">📅 Upcoming Vaccinations</div>
+            <div class="table-wrapper">
+                <div id="vaccinationList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Vaccination Modal -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>➕ Log Vaccination</h2>
+                <button class="close-modal" onclick="closeAddModal()">&times;</button>
+            </div>
+            <form id="addVaccinationForm">
+                <div class="form-group">
+                    <label>Select Animal <span class="required">*</span></label>
+                    <select id="animalId" required>
+                        <option value="">Loading animals...</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Vaccine Name <span class="required">*</span></label>
+                        <select id="vaccineName" required>
+                            <option value="">Select vaccine</option>
+                            <option value="Anthrax">Anthrax</option>
+                            <option value="Botulism">Botulism</option>
+                            <option value="Blackquarter">Blackquarter</option>
+                            <option value="Brucellosis">Brucellosis</option>
+                            <option value="Rift Valley Fever">Rift Valley Fever</option>
+                            <option value="Lumpy Skin Disease">Lumpy Skin Disease</option>
+                            <option value="Newcastle Disease">Newcastle Disease</option>
+                            <option value="IBD (Gumboro)">IBD (Gumboro)</option>
+                            <option value="Other">Other (specify in notes)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Vaccination Date <span class="required">*</span></label>
+                        <input type="date" id="vaccinationDate" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Next Due Date</label>
+                        <input type="date" id="nextDueDate">
+                        <div class="help-text">Leave blank to auto-calculate</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Dose (ml)</label>
+                        <input type="text" id="dose" placeholder="e.g., 5ml">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Batch Number</label>
+                        <input type="text" id="batchNumber" placeholder="Optional">
+                    </div>
+                    <div class="form-group">
+                        <label>Administered By</label>
+                        <input type="text" id="administeredBy" placeholder="Vet name or practice">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="notes" rows="2" placeholder="Additional notes..."></textarea>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">💾 Save Vaccination Record</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+        
+        function getToken() { return localStorage.getItem('agriguard_token'); }
+        
+        function getUser() { 
+            const user = localStorage.getItem('agriguard_user');
+            return user ? JSON.parse(user) : null;
+        }
+        
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${isError ? 'error' : ''}`;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+        
+        function logout() {
+            localStorage.removeItem('agriguard_token');
+            localStorage.removeItem('agriguard_user');
+            localStorage.removeItem('agriguard_role');
+            window.location.href = '../login.html';
+        }
+        
+        function requireLogin() {
+            if (!getToken()) {
+                window.location.href = '../login.html';
+            }
+        }
+        
+        let currentTab = 'upcoming';
+        let animals = [];
+        let vaccinations = [
+            // Demo data
+            { id: 1, animal_tag: 'AG-001', animal_name: 'Themba', vaccine: 'Anthrax', date: '2025-03-15', due_date: '2026-03-15', status: 'completed' },
+            { id: 2, animal_tag: 'AG-002', animal_name: 'Nala', vaccine: 'Botulism', date: '2025-05-10', due_date: '2026-05-10', status: 'completed' },
+            { id: 3, animal_tag: 'AG-003', animal_name: 'Simba', vaccine: 'Blackquarter', date: '2025-10-20', due_date: '2026-04-20', status: 'upcoming' },
+            { id: 4, animal_tag: 'AG-001', animal_name: 'Themba', vaccine: 'Lumpy Skin', date: '2025-01-05', due_date: '2025-12-05', status: 'overdue' },
+        ];
+        
+        async function fetchAnimals() {
+            try {
+                const response = await fetch(`${API_BASE}/api/animals`, {
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    animals = result.data || [];
+                }
+            } catch (error) {
+                console.error('Error fetching animals:', error);
+            }
+        }
+        
+        function updateStats() {
+            const total = vaccinations.length;
+            const completed = vaccinations.filter(v => v.status === 'completed').length;
+            const upcoming = vaccinations.filter(v => v.status === 'upcoming').length;
+            const overdue = vaccinations.filter(v => v.status === 'overdue').length;
+            
+            document.getElementById('totalVaccinations').textContent = total;
+            document.getElementById('completedCount').textContent = completed;
+            document.getElementById('upcomingCount').textContent = upcoming;
+            document.getElementById('overdueCount').textContent = overdue;
+        }
+        
+        function renderCurrentTab() {
+            let filtered = [];
+            let title = '';
+            
+            if (currentTab === 'upcoming') {
+                filtered = vaccinations.filter(v => v.status === 'upcoming');
+                title = '📅 Upcoming Vaccinations';
+            } else if (currentTab === 'overdue') {
+                filtered = vaccinations.filter(v => v.status === 'overdue');
+                title = '⚠️ Overdue Vaccinations';
+            } else {
+                filtered = vaccinations.filter(v => v.status === 'completed');
+                title = '📋 Vaccination History';
+            }
+            
+            document.getElementById('tabTitle').textContent = title;
+            
+            if (filtered.length === 0) {
+                document.getElementById('vaccinationList').innerHTML = `
+                    <div class="empty-state">
+                        📭 No ${currentTab} vaccinations found
+                    </div>
+                `;
+                return;
+            }
+            
+            document.getElementById('vaccinationList').innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Animal</th>
+                            <th>Vaccine</th>
+                            <th>Date</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filtered.map(v => `
+                            <tr>
+                                <td><strong>${v.animal_tag}</strong><br><small>${v.animal_name}</small></td>
+                                <td>${v.vaccine}</td>
+                                <td>${v.date}</td>
+                                <td>${v.due_date || '-'}</td>
+                                <td><span class="badge badge-${v.status}">${v.status}</span></td>
+                                <td>
+                                    <button class="btn-outline" onclick="markCompleted(${v.id})">✓ Complete</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach((t, i) => {
+                t.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            renderCurrentTab();
+        }
+        
+        function markCompleted(vaccinationId) {
+            const vax = vaccinations.find(v => v.id === vaccinationId);
+            if (vax && vax.status !== 'completed') {
+                vax.status = 'completed';
+                vax.completed_date = new Date().toISOString().split('T')[0];
+                updateStats();
+                renderCurrentTab();
+                showToast(`✓ ${vax.vaccine} marked as completed!`);
+            }
+        }
+        
+        async function openAddModal() {
+            await fetchAnimals();
+            const animalSelect = document.getElementById('animalId');
+            if (animals.length > 0) {
+                animalSelect.innerHTML = '<option value="">Select animal</option>' + 
+                    animals.map(a => `<option value="${a.animal_id}">${a.animal_tag} - ${a.species}</option>`).join('');
+            } else {
+                animalSelect.innerHTML = '<option value="">No animals found. Please add an animal first.</option>';
+            }
+            document.getElementById('addModal').classList.add('show');
+        }
+        
+        function closeAddModal() {
+            document.getElementById('addModal').classList.remove('show');
+            document.getElementById('addVaccinationForm').reset();
+        }
+        
+        // Handle form submission
+        document.getElementById('addVaccinationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+            
+            // Get selected animal details
+            const animalId = document.getElementById('animalId').value;
+            const selectedAnimal = animals.find(a => a.animal_id == animalId);
+            
+            const newVaccination = {
+                id: vaccinations.length + 1,
+                animal_tag: selectedAnimal?.animal_tag || 'Unknown',
+                animal_name: selectedAnimal?.animal_tag || 'Unknown',
+                vaccine: document.getElementById('vaccineName').value,
+                date: document.getElementById('vaccinationDate').value,
+                due_date: document.getElementById('nextDueDate').value || calculateDueDate(),
+                status: 'upcoming',
+                batch_number: document.getElementById('batchNumber').value,
+                administered_by: document.getElementById('administeredBy').value,
+                notes: document.getElementById('notes').value
+            };
+            
+            vaccinations.unshift(newVaccination);
+            updateStats();
+            renderCurrentTab();
+            
+            showToast('✅ Vaccination logged successfully!');
+            closeAddModal();
+            
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        });
+        
+        function calculateDueDate() {
+            const date = new Date();
+            date.setFullYear(date.getFullYear() + 1);
+            return date.toISOString().split('T')[0];
+        }
+        
+        // Set default date to today
+        document.getElementById('vaccinationDate').valueAsDate = new Date();
+        
+        // Initialize
+        requireLogin();
+        fetchAnimals();
+        updateStats();
+        renderCurrentTab();
+        
+        // Close modal on outside click
+        window.onclick = function(event) {
+            const modal = document.getElementById('addModal');
+            if (event.target === modal) {
+                closeAddModal();
+            }
+        }
+    </script>
+</body>
+</html>

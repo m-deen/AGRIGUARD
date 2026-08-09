@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriGuard - Health & Vaccination</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        /* Navbar */
+        .navbar {
+            background: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1D9E75;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-links a {
+            text-decoration: none;
+            color: #374151;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .nav-links a:hover {
+            background: #f3f4f6;
+        }
+        
+        .nav-links a.active {
+            background: #1D9E75;
+            color: white;
+            border: 2px solid #0f6e56;
+        }
+        
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .page-header h1 {
+            font-size: 28px;
+            color: #111827;
+        }
+        
+        .page-header p {
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1D9E75;
+        }
+        
+        .stat-label {
+            color: #6b7280;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .tab {
+            padding: 10px 24px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 600;
+            color: #6b7280;
+            transition: all 0.2s;
+        }
+        
+        .tab:hover {
+            color: #1D9E75;
+        }
+        
+        .tab.active {
+            color: #1D9E75;
+            border-bottom: 2px solid #1D9E75;
+        }
+        
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        /* Table */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        th {
+            font-weight: 600;
+            background: #f9fafb;
+        }
+        
+        /* Form */
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 13px;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #1D9E75;
+            box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.1);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            background: #1D9E75;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background: #0f6e56;
+        }
+        
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        /* Vaccination Row */
+        .vax-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        
+        /* Badges */
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .badge-green {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-amber {
+            background: #fed7aa;
+            color: #92400e;
+        }
+        
+        .badge-red {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        /* Alert */
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .alert-danger {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+        
+        /* Progress Bar */
+        .progress-bar {
+            background: #e5e7eb;
+            height: 8px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .progress-fill {
+            background: #1D9E75;
+            height: 8px;
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #1D9E75;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+            font-weight: 500;
+        }
+        
+        .toast.error {
+            background: #ef4444;
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            .container {
+                padding: 15px;
+            }
+            .nav-links {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">🌾 AgriGuard</div>
+        <div class="nav-links">
+            <a href="dashboard.html">📊 Dashboard</a>
+            <a href="animals.html">🐄 My Animals</a>
+            <a href="add-animal.html">➕ Add Animal</a>
+            <a href="vaccinations.html">💉 Vaccinations</a>
+            <a href="health.html" class="active">🏥 Health</a>
+            <a href="tracking.html">📍 Tracking</a>
+            <a href="auctions.html">💰 Auctions</a>
+            <a href="chat-bot.html">🤖 AI Chat</a>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="container">
+        <div class="page-header">
+            <div>
+                <h1>🏥 Health & Vaccination</h1>
+                <p>Manage vaccination schedules and health records</p>
+            </div>
+            <button class="btn-primary" onclick="showTab('log')">➕ Log Vaccination</button>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalVax">0</div>
+                <div class="stat-label">Total Vaccinations</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="upcomingVax" style="color: #f59e0b;">0</div>
+                <div class="stat-label">Upcoming (30 days)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="overdueVax" style="color: #ef4444;">0</div>
+                <div class="stat-label">Overdue</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="complianceRate">0%</div>
+                <div class="progress-bar"><div class="progress-fill" id="complianceBar"></div></div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('overview')">📋 Overview</button>
+            <button class="tab" onclick="showTab('upcoming')">📅 Upcoming</button>
+            <button class="tab" onclick="showTab('overdue')">⚠️ Overdue</button>
+            <button class="tab" onclick="showTab('history')">📜 History</button>
+            <button class="tab" onclick="showTab('log')">➕ Log Vaccination</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overviewTab" class="tab-content active">
+            <div class="card">
+                <div class="card-title">📋 Vaccination Overview</div>
+                <div id="overviewList"></div>
+            </div>
+        </div>
+
+        <!-- Upcoming Tab -->
+        <div id="upcomingTab" class="tab-content">
+            <div class="card">
+                <div class="card-title">📅 Upcoming Vaccinations (Next 30 Days)</div>
+                <div id="upcomingList"></div>
+            </div>
+        </div>
+
+        <!-- Overdue Tab -->
+        <div id="overdueTab" class="tab-content">
+            <div class="card">
+                <div class="card-title">⚠️ Overdue Vaccinations</div>
+                <div id="overdueList"></div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="historyTab" class="tab-content">
+            <div class="card">
+                <div class="card-title">📜 Vaccination History</div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr><th>Animal</th><th>Vaccine</th><th>Date Given</th><th>Next Due</th><th>Status</th><th>Vet</th>
+                        </thead>
+                        <tbody id="historyTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Log Vaccination Tab -->
+        <div id="logTab" class="tab-content">
+            <div class="card">
+                <div class="card-title">➕ Log a Vaccination</div>
+                <div id="logMsg"></div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Animal *</label>
+                        <select id="logAnimal" class="form-select"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Vaccine *</label>
+                        <select id="logVaccine" class="form-select">
+                            <option value="">Select vaccine</option>
+                            <option>Anthrax</option><option>Botulism</option><option>Blackquarter</option>
+                            <option>Brucellosis</option><option>Rift Valley Fever</option>
+                            <option>Lumpy Skin Disease</option><option>Pulpy Kidney</option>
+                            <option>Blue Tongue</option><option>Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Vaccination Date *</label>
+                        <input type="date" id="logDate" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Next Due Date</label>
+                        <input type="date" id="logNextDue" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Dose (ml)</label>
+                        <input type="text" id="logDose" class="form-input" placeholder="e.g., 5ml">
+                    </div>
+                    <div class="form-group">
+                        <label>Veterinarian</label>
+                        <input type="text" id="logVet" class="form-input" placeholder="Dr. Name">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="logNotes" rows="2" class="form-input" placeholder="Additional notes..."></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button class="btn-primary" onclick="logVaccination()">Save Record</button>
+                    <button class="btn-secondary" onclick="clearLogForm()">Clear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        function getToken() { return localStorage.getItem('agriguard_token'); }
+        
+        function logout() {
+            localStorage.clear();
+            window.location.href = '../login.html';
+        }
+        
+        // Demo data
+        let demoAnimals = [
+            { animal_id: 1, name: 'Themba', ear_tag_id: 'AG-001', species: 'Cattle' },
+            { animal_id: 2, name: 'Nala', ear_tag_id: 'AG-002', species: 'Cattle' },
+            { animal_id: 3, name: 'Simba', ear_tag_id: 'AG-003', species: 'Goat' }
+        ];
+        
+        let vaccinations = [
+            { id: 1, animal_id: 1, animal_name: 'Themba', vaccine: 'Anthrax', date: '2025-03-15', due_date: '2026-03-15', status: 'completed', vet: 'Dr. Smith' },
+            { id: 2, animal_id: 2, animal_name: 'Nala', vaccine: 'Botulism', date: '2025-05-10', due_date: '2026-05-10', status: 'completed', vet: 'Dr. Jones' },
+            { id: 3, animal_id: 3, animal_name: 'Simba', vaccine: 'Blackquarter', date: '2025-10-20', due_date: '2026-04-20', status: 'upcoming', vet: '' },
+            { id: 4, animal_id: 1, animal_name: 'Themba', vaccine: 'Lumpy Skin', date: '2025-01-05', due_date: '2025-12-05', status: 'overdue', vet: 'Dr. Smith' }
+        ];
+        
+        function updateStats() {
+            const total = vaccinations.length;
+            const upcoming = vaccinations.filter(v => v.status === 'upcoming').length;
+            const overdue = vaccinations.filter(v => v.status === 'overdue').length;
+            const completed = vaccinations.filter(v => v.status === 'completed').length;
+            const compliance = total > 0 ? Math.round((completed / total) * 100) : 100;
+            
+            document.getElementById('totalVax').textContent = total;
+            document.getElementById('upcomingVax').textContent = upcoming;
+            document.getElementById('overdueVax').textContent = overdue;
+            document.getElementById('complianceRate').textContent = compliance + '%';
+            document.getElementById('complianceBar').style.width = compliance + '%';
+        }
+        
+        function getAnimalName(animalId) {
+            const animal = demoAnimals.find(a => a.animal_id === animalId);
+            return animal ? `${animal.name} (${animal.ear_tag_id})` : 'Unknown';
+        }
+        
+        function renderOverview() {
+            const container = document.getElementById('overviewList');
+            if (vaccinations.length === 0) {
+                container.innerHTML = '<div class="empty-state">No vaccination records yet</div>';
+                return;
+            }
+            container.innerHTML = vaccinations.map(v => `
+                <div class="vax-row">
+                    <div style="flex: 1;">
+                        <strong>${v.vaccine}</strong> — ${getAnimalName(v.animal_id)}
+                        <div style="font-size: 12px; color: #6b7280;">Due: ${v.due_date || 'N/A'}</div>
+                    </div>
+                    <span class="badge badge-${v.status === 'completed' ? 'green' : v.status === 'upcoming' ? 'amber' : 'red'}">${v.status}</span>
+                </div>
+            `).join('');
+        }
+        
+        function renderUpcoming() {
+            const upcoming = vaccinations.filter(v => v.status === 'upcoming');
+            const container = document.getElementById('upcomingList');
+            if (upcoming.length === 0) {
+                container.innerHTML = '<div class="empty-state">✅ No upcoming vaccinations</div>';
+                return;
+            }
+            container.innerHTML = upcoming.map(v => `
+                <div class="vax-row">
+                    <div style="flex: 1;">
+                        <strong>${v.vaccine}</strong> — ${getAnimalName(v.animal_id)}
+                        <div style="font-size: 12px;">Due: ${v.due_date}</div>
+                    </div>
+                    <button class="btn-primary" style="padding: 6px 16px;" onclick="markComplete(${v.id})">Mark Done</button>
+                </div>
+            `).join('');
+        }
+        
+        function renderOverdue() {
+            const overdue = vaccinations.filter(v => v.status === 'overdue');
+            const container = document.getElementById('overdueList');
+            if (overdue.length === 0) {
+                container.innerHTML = '<div class="empty-state">✅ No overdue vaccinations</div>';
+                return;
+            }
+            container.innerHTML = overdue.map(v => `
+                <div class="vax-row" style="background: #fee2e2;">
+                    <div style="flex: 1;">
+                        <strong>${v.vaccine}</strong> — ${getAnimalName(v.animal_id)}
+                        <div style="font-size: 12px; color: #991b1b;">Was due: ${v.due_date}</div>
+                    </div>
+                    <button class="btn-primary" style="background: #ef4444; padding: 6px 16px;" onclick="markComplete(${v.id})">Vaccinate Now</button>
+                </div>
+            `).join('');
+        }
+        
+        function renderHistory() {
+            const container = document.getElementById('historyTable');
+            container.innerHTML = vaccinations.map(v => `
+                <tr>
+                    <td><strong>${getAnimalName(v.animal_id)}</strong></td>
+                    <td>${v.vaccine}</td>
+                    <td>${v.date}</td>
+                    <td>${v.due_date || '-'}</td>
+                    <td><span class="badge badge-${v.status === 'completed' ? 'green' : v.status === 'upcoming' ? 'amber' : 'red'}">${v.status}</span></td>
+                    <td>${v.vet || '-'}</td>
+                </tr>
+            `).join('');
+        }
+        
+        function markComplete(id) {
+            const index = vaccinations.findIndex(v => v.id === id);
+            if (index !== -1) {
+                vaccinations[index].status = 'completed';
+                vaccinations[index].date = new Date().toISOString().split('T')[0];
+                updateStats();
+                renderAll();
+                showToast('✅ Vaccination marked as completed!');
+            }
+        }
+        
+        function renderAll() {
+            renderOverview();
+            renderUpcoming();
+            renderOverdue();
+            renderHistory();
+        }
+        
+        function showTab(tabName) {
+            const tabs = ['overview', 'upcoming', 'overdue', 'history', 'log'];
+            tabs.forEach(t => {
+                const tabEl = document.getElementById(t + 'Tab');
+                const btnEl = document.querySelector(`.tab:nth-child(${tabs.indexOf(t) + 1})`);
+                if (tabEl) tabEl.classList.remove('active');
+                if (btnEl) btnEl.classList.remove('active');
+            });
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            const btns = document.querySelectorAll('.tab');
+            btns[tabs.indexOf(tabName)].classList.add('active');
+        }
+        
+        function logVaccination() {
+            const animalId = document.getElementById('logAnimal').value;
+            const vaccine = document.getElementById('logVaccine').value;
+            const date = document.getElementById('logDate').value;
+            
+            if (!animalId || !vaccine || !date) {
+                document.getElementById('logMsg').innerHTML = '<div class="alert alert-danger">Please fill all required fields</div>';
+                return;
+            }
+            
+            const newVax = {
+                id: vaccinations.length + 1,
+                animal_id: parseInt(animalId),
+                animal_name: getAnimalName(parseInt(animalId)),
+                vaccine: vaccine,
+                date: date,
+                due_date: document.getElementById('logNextDue').value || new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0],
+                status: 'completed',
+                vet: document.getElementById('logVet').value,
+                dose: document.getElementById('logDose').value,
+                notes: document.getElementById('logNotes').value
+            };
+            
+            vaccinations.unshift(newVax);
+            updateStats();
+            renderAll();
+            showToast('✅ Vaccination logged successfully!');
+            clearLogForm();
+            showTab('history');
+        }
+        
+        function clearLogForm() {
+            document.getElementById('logAnimal').value = '';
+            document.getElementById('logVaccine').value = '';
+            document.getElementById('logDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('logNextDue').value = '';
+            document.getElementById('logDose').value = '';
+            document.getElementById('logVet').value = '';
+            document.getElementById('logNotes').value = '';
+            document.getElementById('logMsg').innerHTML = '';
+        }
+        
+        // Populate animal dropdown
+        function populateAnimalDropdown() {
+            const select = document.getElementById('logAnimal');
+            select.innerHTML = '<option value="">Select animal</option>' + 
+                demoAnimals.map(a => `<option value="${a.animal_id}">${a.name} (${a.ear_tag_id})</option>`).join('');
+        }
+        
+        // Auto-calculate next due date
+        document.getElementById('logVaccine').addEventListener('change', function() {
+            const intervals = { Anthrax: 365, Botulism: 365, Blackquarter: 180, Brucellosis: 365, 'Rift Valley Fever': 365, 'Lumpy Skin Disease': 365, 'Pulpy Kidney': 365, 'Blue Tongue': 365 };
+            const days = intervals[this.value];
+            if (days) {
+                const next = new Date();
+                next.setDate(next.getDate() + days);
+                document.getElementById('logNextDue').value = next.toISOString().split('T')[0];
+            }
+        });
+        
+        // Initialize
+        if (!getToken()) window.location.href = '../login.html';
+        document.getElementById('logDate').valueAsDate = new Date();
+        populateAnimalDropdown();
+        updateStats();
+        renderAll();
+    </script>
+</body>
+</html>

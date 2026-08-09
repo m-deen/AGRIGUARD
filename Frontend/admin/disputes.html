@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriGuard - Admin: Disputes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        .navbar {
+            background: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1D9E75;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-links a {
+            text-decoration: none;
+            color: #374151;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+        
+        .nav-links a:hover {
+            background: #f3f4f6;
+        }
+        
+        .nav-links a.active {
+            background: #1D9E75;
+            color: white;
+            border: 2px solid #0f6e56;
+        }
+        
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .page-header h1 {
+            font-size: 28px;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .page-header p {
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1D9E75;
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        th {
+            font-weight: 600;
+            color: #374151;
+            background: #f9fafb;
+        }
+        
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .badge-open {
+            background: #fed7aa;
+            color: #92400e;
+        }
+        
+        .badge-resolved {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-escalated {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        button {
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            border: none;
+        }
+        
+        .btn-resolve {
+            background: #1D9E75;
+            color: white;
+        }
+        
+        .btn-view {
+            background: #f3f4f6;
+            color: #374151;
+            margin-right: 8px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            width: 90%;
+            max-width: 550px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-header h2 {
+            font-size: 20px;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #1D9E75;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+        }
+        
+        .toast.error {
+            background: #ef4444;
+        }
+        
+        .icon {
+            display: inline-flex;
+            flex-shrink: 0;
+        }
+        
+        .refresh-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            .stats-row {
+                grid-template-columns: 1fr;
+            }
+            .nav-links {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">
+            <svg class="icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            AgriGuard
+        </div>
+        <div class="nav-links">
+            <a href="users.html">
+                <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Users
+            </a>
+            <a href="disputes.html" class="active">
+                <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="m4 7 4-2 4 2-4 10-4-10z"/><path d="m16 7 4-2 4 2-4 10-4-10z"/><path d="M4 21h16"/></svg>
+                Disputes
+            </a>
+            <a href="analytics.html">
+                <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                Analytics
+            </a>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="container">
+        <div class="page-header">
+            <div>
+                <h1>
+                    <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="m4 7 4-2 4 2-4 10-4-10z"/><path d="m16 7 4-2 4 2-4 10-4-10z"/><path d="M4 21h16"/></svg>
+                    Dispute Resolution
+                </h1>
+                <p>Manage and resolve buyer-seller disputes</p>
+            </div>
+            <button onclick="refreshDisputes()" class="refresh-btn" style="background: #f3f4f6; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+                <svg class="icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                Refresh
+            </button>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value" id="totalDisputes">0</div>
+                <div class="stat-label">Total Disputes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="openDisputes">0</div>
+                <div class="stat-label">Open</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="resolvedDisputes">0</div>
+                <div class="stat-label">Resolved</div>
+            </div>
+        </div>
+
+        <!-- Disputes Table -->
+        <div class="card">
+            <div class="card-title">All Disputes</div>
+            <div class="table-wrapper">
+                <div id="disputesTable"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resolve Modal -->
+    <div id="resolveModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Resolve Dispute</h2>
+                <button class="close-modal" onclick="closeResolveModal()">&times;</button>
+            </div>
+            <div id="resolveModalContent"></div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+        let disputes = [];
+        let currentDispute = null;
+        
+        function getToken() { return localStorage.getItem('agriguard_token'); }
+        
+        function getUser() {
+            const user = localStorage.getItem('agriguard_user');
+            return user ? JSON.parse(user) : null;
+        }
+        
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${isError ? 'error' : ''}`;
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 3000);
+        }
+        
+        function logout() {
+            localStorage.removeItem('agriguard_token');
+            localStorage.removeItem('agriguard_user');
+            localStorage.removeItem('agriguard_role');
+            window.location.href = '../login.html';
+        }
+        
+        function requireLogin() {
+            const token = getToken();
+            if (!token) {
+                window.location.href = '../login.html';
+            }
+            const user = getUser();
+            if (user && user.role !== 'admin') {
+                showToast('Access denied. Admin only.', true);
+                setTimeout(() => window.location.href = '../farmer/dashboard.html', 2000);
+            }
+        }
+        
+        function getStatusBadge(status) {
+            const badges = {
+                'open': '<span class="badge badge-open">Open</span>',
+                'resolved': '<span class="badge badge-resolved">Resolved</span>',
+                'escalated': '<span class="badge badge-escalated">Escalated</span>'
+            };
+            return badges[status] || '<span class="badge">Unknown</span>';
+        }
+        
+        function updateStats() {
+            const total = disputes.length;
+            const open = disputes.filter(d => d.status === 'open').length;
+            const resolved = disputes.filter(d => d.status === 'resolved').length;
+            
+            document.getElementById('totalDisputes').textContent = total;
+            document.getElementById('openDisputes').textContent = open;
+            document.getElementById('resolvedDisputes').textContent = resolved;
+        }
+        
+        // Demo disputes data - replace with API call when ready
+        function loadDisputes() {
+            disputes = [
+                { id: 1, auction_title: 'Nguni Bull - 4 years', buyer: 'John D.', seller: 'Thabo Farm', reason: 'Livestock not as described', status: 'open', created_date: '2026-04-28', amount: 8500 },
+                { id: 2, auction_title: 'Boer Goat Buck', buyer: 'Sarah B.', seller: 'Green Acres', reason: 'Delivery delay', status: 'open', created_date: '2026-04-30', amount: 3200 },
+                { id: 3, auction_title: 'Dorper Ewe', buyer: 'Mike R.', seller: 'Sunset Farm', reason: 'Health issue after delivery', status: 'resolved', created_date: '2026-04-25', amount: 2800 },
+                { id: 4, auction_title: 'Bonsmara Cow', buyer: 'Peter M.', seller: 'Mountain View', reason: 'Wrong animal delivered', status: 'escalated', created_date: '2026-04-20', amount: 7800 }
+            ];
+            updateStats();
+            renderDisputes();
+        }
+        
+        function renderDisputes() {
+            const container = document.getElementById('disputesTable');
+            
+            if (disputes.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px;">No disputes found</div>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Auction</th>
+                            <th>Buyer</th>
+                            <th>Seller</th>
+                            <th>Amount</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${disputes.map(dispute => `
+                            <tr>
+                                <td>${dispute.id}</td>
+                                <td><strong>${dispute.auction_title}</strong></td>
+                                <td>${dispute.buyer}</td>
+                                <td>${dispute.seller}</td>
+                                <td>R${dispute.amount.toLocaleString()}</td>
+                                <td>${dispute.reason}</td>
+                                <td>${getStatusBadge(dispute.status)}</td>
+                                <td>${dispute.created_date}</td>
+                                <td>
+                                    <button class="btn-view" onclick="viewDispute(${dispute.id})">View</button>
+                                    ${dispute.status === 'open' ? `<button class="btn-resolve" onclick="openResolveModal(${dispute.id})">Resolve</button>` : ''}
+                                 </td>
+                             </tr>
+                        `).join('')}
+                    </tbody>
+                 </table>
+            `;
+        }
+        
+        function viewDispute(disputeId) {
+            currentDispute = disputes.find(d => d.id === disputeId);
+            if (!currentDispute) return;
+            
+            const modalContent = document.getElementById('resolveModalContent');
+            modalContent.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <p><strong>Auction:</strong> ${currentDispute.auction_title}</p>
+                    <p><strong>Buyer:</strong> ${currentDispute.buyer}</p>
+                    <p><strong>Seller:</strong> ${currentDispute.seller}</p>
+                    <p><strong>Amount:</strong> R${currentDispute.amount.toLocaleString()}</p>
+                    <p><strong>Reason:</strong> ${currentDispute.reason}</p>
+                    <p><strong>Date:</strong> ${currentDispute.created_date}</p>
+                </div>
+                <button onclick="closeResolveModal()" style="padding: 8px 16px; background: #f3f4f6; border: none; border-radius: 6px;">Close</button>
+            `;
+            document.getElementById('resolveModal').classList.add('show');
+        }
+        
+        function openResolveModal(disputeId) {
+            currentDispute = disputes.find(d => d.id === disputeId);
+            if (!currentDispute) return;
+            
+            const modalContent = document.getElementById('resolveModalContent');
+            modalContent.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <p><strong>Auction:</strong> ${currentDispute.auction_title}</p>
+                    <p><strong>Buyer:</strong> ${currentDispute.buyer}</p>
+                    <p><strong>Seller:</strong> ${currentDispute.seller}</p>
+                    <p><strong>Amount:</strong> R${currentDispute.amount.toLocaleString()}</p>
+                    <p><strong>Reason:</strong> ${currentDispute.reason}</p>
+                </div>
+                <div class="form-group">
+                    <label>Resolution Decision</label>
+                    <select id="resolutionDecision" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #d1d5db;">
+                        <option value="release_to_buyer">Refund to Buyer</option>
+                        <option value="release_to_seller">Release to Seller</option>
+                        <option value="partial">Partial Refund (specify amount)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="partialAmountDiv" style="display: none;">
+                    <label>Partial Refund Amount (R)</label>
+                    <input type="number" id="partialAmount" class="form-input" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;">
+                </div>
+                <div class="form-group">
+                    <label>Admin Notes</label>
+                    <textarea id="adminNotes" rows="3" placeholder="Explain the resolution decision..."></textarea>
+                </div>
+                <button onclick="resolveDispute()" style="width: 100%; padding: 12px; background: #1D9E75; color: white; border: none; border-radius: 8px; cursor: pointer;">Confirm Resolution</button>
+            `;
+            
+            document.getElementById('resolutionDecision').addEventListener('change', function() {
+                const partialDiv = document.getElementById('partialAmountDiv');
+                partialDiv.style.display = this.value === 'partial' ? 'block' : 'none';
+            });
+            
+            document.getElementById('resolveModal').classList.add('show');
+        }
+        
+        function resolveDispute() {
+            const decision = document.getElementById('resolutionDecision').value;
+            const adminNotes = document.getElementById('adminNotes').value;
+            
+            if (!adminNotes) {
+                showToast('Please add admin notes', true);
+                return;
+            }
+            
+            // Update dispute status
+            currentDispute.status = 'resolved';
+            renderDisputes();
+            updateStats();
+            
+            showToast(`Dispute resolved: ${decision === 'release_to_buyer' ? 'Refunded to buyer' : decision === 'release_to_seller' ? 'Released to seller' : 'Partial refund processed'}`);
+            closeResolveModal();
+        }
+        
+        function closeResolveModal() {
+            document.getElementById('resolveModal').classList.remove('show');
+            currentDispute = null;
+        }
+        
+        function refreshDisputes() {
+            loadDisputes();
+            showToast('Refreshing disputes...');
+        }
+        
+        // Initialize
+        requireLogin();
+        loadDisputes();
+    </script>
+</body>
+</html>

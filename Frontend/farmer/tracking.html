@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AgriGuard – GPS Tracking</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f5f7f5;--surface:#fff;--surface2:#f9fafb;
+  --border:#e5e7eb;--text:#111827;--text2:#374151;--text3:#6b7280;
+  --green:#1D9E75;--green-dark:#0f6e56;--green-light:#e1f5ee;
+  --red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;
+  --shadow:rgba(0,0,0,.08);--nav-bg:#fff;
+}
+body.night{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;
+  --border:#2d3248;--text:#e2e8f0;--text2:#a0aec0;--text3:#718096;
+  --green:#22c97e;--green-dark:#16a064;--green-light:#0d2b1e;
+  --red:#fc6b6b;--amber:#fbbf24;--blue:#60a5fa;
+  --shadow:rgba(0,0,0,.4);--nav-bg:#13161f;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+     background:var(--bg);color:var(--text);transition:background .3s,color .3s}
+.navbar{background:var(--nav-bg);padding:12px 24px;display:flex;
+        justify-content:space-between;align-items:center;
+        box-shadow:0 2px 8px var(--shadow);flex-wrap:wrap;gap:10px;
+        border-bottom:1px solid var(--border);position:sticky;top:0;z-index:900}
+.logo{font-size:20px;font-weight:700;color:var(--green)}
+.nav-links{display:flex;gap:4px;flex-wrap:wrap}
+.nav-links a{text-decoration:none;color:var(--text2);padding:7px 12px;
+             border-radius:8px;font-size:13px;transition:all .2s}
+.nav-links a:hover{background:var(--green-light);color:var(--green)}
+.nav-links a.active{background:var(--green);color:#fff}
+.nav-right{display:flex;gap:8px;align-items:center}
+.night-btn{background:none;border:1px solid var(--border);color:var(--text2);
+           padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+.night-btn:hover{border-color:var(--green);color:var(--green)}
+.logout-btn{background:var(--red);color:#fff;border:none;padding:7px 16px;
+            border-radius:8px;cursor:pointer;font-size:13px;font-weight:500}
+.container{max-width:1700px;margin:0 auto;padding:20px}
+.page-header{display:flex;justify-content:space-between;align-items:flex-start;
+             margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.page-header h1{font-size:26px;color:var(--text)}
+.page-header p{color:var(--text3);font-size:13px;margin-top:4px}
+.header-actions{display:flex;gap:8px;flex-wrap:wrap}
+.tracking-grid{display:grid;grid-template-columns:320px 1fr 300px;gap:16px}
+@media(max-width:1200px){.tracking-grid{grid-template-columns:280px 1fr}}
+@media(max-width:768px){.tracking-grid{grid-template-columns:1fr}}
+.panel{background:var(--surface);border-radius:14px;padding:16px;
+       box-shadow:0 2px 8px var(--shadow);border:1px solid var(--border)}
+.panel h3{font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;
+          display:flex;align-items:center;gap:6px}
+.panel h4{font-size:13px;font-weight:600;color:var(--text2);
+          margin:14px 0 8px;padding-top:14px;border-top:1px solid var(--border)}
+.sidebar{max-height:calc(100vh - 160px);overflow-y:auto}
+.btn{padding:9px 18px;border-radius:8px;border:none;cursor:pointer;
+     font-size:13px;font-weight:500;transition:all .2s;display:inline-flex;
+     align-items:center;gap:6px}
+.btn-primary{background:var(--green);color:#fff}
+.btn-primary:hover{background:var(--green-dark)}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed}
+.btn-outline{background:var(--surface);color:var(--green);border:1.5px solid var(--green)}
+.btn-outline:hover{background:var(--green-light)}
+.btn-danger{background:var(--red);color:#fff;border:none}
+.btn-warn{background:var(--amber);color:#fff;border:none}
+.btn-sm{padding:5px 10px;font-size:11px}
+.map-wrap{border-radius:14px;overflow:hidden;
+          box-shadow:0 2px 8px var(--shadow);border:1px solid var(--border)}
+#map{height:calc(100vh - 180px);min-height:480px;width:100%}
+.zone-card{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.zone-card-head{padding:9px 12px;font-weight:600;font-size:13px;
+                display:flex;justify-content:space-between;align-items:center;
+                border-left:4px solid var(--green);background:var(--surface2)}
+.zone-card-body{padding:8px 12px;background:var(--surface);font-size:12px;color:var(--text3)}
+.animal-row{display:flex;justify-content:space-between;align-items:center;
+            padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.animal-row:last-child{border-bottom:none}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;flex-shrink:0}
+.dot-ok{background:#10B981}.dot-warn{background:#F59E0B}.dot-crit{background:#EF4444}
+.zone-select{font-size:11px;padding:2px 6px;border-radius:5px;
+             border:1px solid var(--border);background:var(--surface2);
+             color:var(--text);max-width:110px}
+.alerts-panel{max-height:calc(100vh - 160px);overflow-y:auto}
+.alert-card{border-radius:10px;padding:10px 12px;margin-bottom:8px;
+            border-left:4px solid var(--red);background:var(--surface2);
+            border:1px solid var(--border)}
+.alert-card.resolved{opacity:.5;border-left-color:var(--text3)}
+.alert-card.hs-card{border-left-color:var(--red)}
+.alert-card.nm-card{border-left-color:var(--amber)}
+.alert-card.gb-card{border-left-color:var(--blue)}
+.alert-type{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.alert-type.hs{color:var(--red)}.alert-type.nm{color:var(--amber)}.alert-type.gb{color:var(--blue)}
+.alert-msg{font-size:12px;color:var(--text2);margin-bottom:4px;line-height:1.4}
+.alert-meta{font-size:11px;color:var(--text3);display:flex;justify-content:space-between;align-items:center}
+.resolve-btn{font-size:11px;padding:3px 8px;border-radius:5px;border:none;
+             background:var(--green);color:#fff;cursor:pointer}
+.gf-status{font-size:12px;color:var(--text3);margin-bottom:8px;
+           padding:8px;background:var(--surface2);border-radius:6px;
+           border:1px solid var(--border);line-height:1.5}
+.gf-btns{display:flex;flex-direction:column;gap:6px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2)}
+.legend-dot{width:11px;height:11px;border-radius:50%}
+.stats-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.stat-chip{flex:1;min-width:70px;background:var(--surface2);border-radius:10px;
+           padding:8px;text-align:center;border:1px solid var(--border)}
+.stat-chip .val{font-size:20px;font-weight:700;color:var(--green)}
+.stat-chip.danger .val{color:var(--red)}
+.stat-chip.warn .val{color:var(--amber)}
+.stat-chip .lbl{font-size:10px;color:var(--text3);margin-top:2px}
+.toast{position:fixed;bottom:28px;right:28px;padding:13px 22px;border-radius:10px;
+       display:none;z-index:9999;font-weight:500;font-size:14px;
+       box-shadow:0 4px 16px rgba(0,0,0,.2);max-width:380px;line-height:1.4}
+.toast.ok{background:var(--green);color:#fff}
+.toast.err{background:var(--red);color:#fff}
+.toast.warn{background:var(--amber);color:#fff}
+.draw-indicator{position:fixed;top:80px;left:50%;transform:translateX(-50%);
+                background:var(--amber);color:#fff;padding:10px 20px;
+                border-radius:20px;font-weight:600;font-size:13px;
+                z-index:1100;display:none;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);
+         border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:20px;color:var(--text3);font-size:13px}
+
+/* Pulse animation for anomalous markers */
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(239,68,68,.6)}
+  70%{box-shadow:0 0 0 10px rgba(239,68,68,0)}
+  100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}
+}
+.marker-critical{animation:pulse 1.5s infinite}
+
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
+          z-index:1200;justify-content:center;align-items:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border-radius:14px;padding:26px;
+       width:90%;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,.2);
+       border:1px solid var(--border)}
+.modal h3{margin-bottom:16px;color:var(--text)}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.form-group input,.form-group select{width:100%;padding:9px 12px;
+  border:1px solid var(--border);border-radius:8px;font-size:13px;
+  background:var(--surface2);color:var(--text)}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--green)}
+.modal-btns{display:flex;gap:10px;margin-top:14px}
+.modal-btns .btn{flex:1;justify-content:center}
+.loc-hint{font-size:11px;color:var(--text3);margin-top:4px;
+          padding:6px;background:var(--surface2);border-radius:6px;border:1px solid var(--border)}
+
+/* Simulate progress bar */
+.sim-progress{display:none;position:fixed;top:0;left:0;height:3px;
+              background:var(--green);z-index:9999;transition:width .3s}
+</style>
+</head>
+<body>
+
+<div class="sim-progress" id="simProgress"></div>
+<div class="draw-indicator" id="drawIndicator">
+  ✏️ Drawing Geofence — Click to add points · Double-click to finish
+</div>
+
+<div class="navbar">
+  <div class="logo">🌾 AgriGuard</div>
+  <div class="nav-links">
+    <a href="dashboard.html">📊 Dashboard</a>
+    <a href="animals.html">🐄 Animals</a>
+    <a href="add-animal.html">➕ Add Animal</a>
+    <a href="vaccinations.html">💉 Vaccinations</a>
+    <a href="health.html">🏥 Health</a>
+    <a href="tracking.html" class="active">📍 Tracking</a>
+    <a href="auctions.html">💰 Auctions</a>
+    <a href="chat-bot.html">🤖 AI Chat</a>
+  </div>
+  <div class="nav-right">
+    <button class="night-btn" onclick="toggleNight()" id="nightBtn">🌙 Night Mode</button>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="page-header">
+    <div>
+      <h1>📍 GPS Livestock Tracking</h1>
+      <p>Real-time animal locations · Zone monitoring · Theft anomaly detection</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" onclick="simulateGPS()" id="simBtn">▶ Simulate GPS</button>
+      <button class="btn btn-warn" onclick="resetPositions()">🔄 Reset Positions</button>
+      <button class="btn btn-outline" onclick="refreshAll()">↺ Refresh</button>
+      <button class="btn btn-outline" onclick="openZoneModal()">➕ Add Zone</button>
+    </div>
+  </div>
+
+  <div class="tracking-grid">
+    <!-- LEFT SIDEBAR -->
+    <div class="panel sidebar" id="leftPanel">
+      <h3>📋 Farm Zones</h3>
+      <div id="zonesList"><div class="empty"><div class="spinner"></div></div></div>
+
+      <h4>🐄 Animals by Zone</h4>
+      <div id="animalsList"><div class="empty">Loading…</div></div>
+
+      <h4>Legend</h4>
+      <div class="legend">
+        <div class="legend-item"><span class="legend-dot" style="background:#10B981"></span>Normal</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#F59E0B"></span>Warning</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#EF4444"></span>Critical</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#9CA3AF"></span>No GPS</div>
+      </div>
+
+      <h4>🛡️ Geofence</h4>
+      <div class="gf-status" id="gfStatus">
+        <div class="spinner"></div> Loading geofence…
+      </div>
+      <div class="gf-btns">
+        <button class="btn btn-primary" onclick="startDrawGeofence()" id="drawBtn">✏️ Draw Geofence</button>
+        <button class="btn btn-outline btn-danger" onclick="clearGeofence()">🗑 Clear Geofence</button>
+      </div>
+    </div>
+
+    <!-- MAP -->
+    <div class="map-wrap"><div id="map"></div></div>
+
+    <!-- RIGHT — ALERTS -->
+    <div class="panel alerts-panel" id="alertsPanel">
+      <h3>🚨 Anomaly Alerts</h3>
+      <div class="stats-row">
+        <div class="stat-chip danger"><div class="val" id="statTotal">0</div><div class="lbl">Total</div></div>
+        <div class="stat-chip warn"><div class="val" id="statUnresolved">0</div><div class="lbl">Active</div></div>
+        <div class="stat-chip"><div class="val" id="statResolved">0</div><div class="lbl">Resolved</div></div>
+      </div>
+      <div id="alertsList"><div class="empty">No anomalies yet 🎉</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ZONE MODAL -->
+<div class="modal-bg" id="zoneModal">
+  <div class="modal">
+    <h3>➕ Create New Zone</h3>
+    <div class="form-group">
+      <label>Zone Name *</label>
+      <input type="text" id="zoneName" placeholder="e.g. North Pasture"/>
+    </div>
+    <div class="form-group">
+      <label>Zone Type *</label>
+      <select id="zoneType">
+        <option value="cattle">🐄 Cattle</option>
+        <option value="goat">🐐 Goat</option>
+        <option value="sheep">🐑 Sheep</option>
+        <option value="poultry">🐔 Poultry</option>
+        <option value="mixed">🌾 Mixed</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Radius (metres)</label>
+      <input type="number" id="zoneRadius" value="300" min="50" step="10"/>
+    </div>
+    <div class="form-group">
+      <label>Location *</label>
+      <button class="btn btn-outline" style="width:100%;justify-content:center"
+              onclick="pickZoneLocation()">📍 Pick on Map</button>
+      <div class="loc-hint" id="locHint">No location picked — defaults to map centre</div>
+    </div>
+    <div class="form-group">
+      <label>Colour</label>
+      <input type="color" id="zoneColor" value="#1D9E75" style="height:42px"/>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="createZone()">Create Zone</button>
+      <button class="btn btn-outline" onclick="closeZoneModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const API = 'http://localhost:5000';
+let map, mapReady = false;
+let markers = {}, zoneLayers = {};
+let geofenceLayer = null, geofenceData = null;
+let animals = [], zones = [];
+let drawMode = false, gfPoints = [], gfPolyline = null;
+let pickedLoc = null, pickerMarker = null;
+let isNight = false;
+let lightTile, darkTile;
+
+// ============================================================
+// NIGHT MODE
+// ============================================================
+function applyNight(night) {
+  isNight = night;
+  document.body.classList.toggle('night', night);
+  document.getElementById('nightBtn').textContent = night ? '☀️ Day Mode' : '🌙 Night Mode';
+  localStorage.setItem('agriguard_night', night ? '1' : '0');
+  if (mapReady) {
+    if (night) { if (lightTile) map.removeLayer(lightTile); if (darkTile) darkTile.addTo(map); }
+    else { if (darkTile) map.removeLayer(darkTile); if (lightTile) lightTile.addTo(map); }
+  }
+}
+function toggleNight() { applyNight(!isNight); }
+function autoNight() {
+  const saved = localStorage.getItem('agriguard_night');
+  if (saved !== null) return applyNight(saved === '1');
+  applyNight(new Date().getHours() >= 19 || new Date().getHours() < 6);
+}
+
+// ============================================================
+// AUTH
+// ============================================================
+function getToken() { return localStorage.getItem('agriguard_token'); }
+function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+function requireLogin() { if (!getToken()) window.location.href = 'login.html'; }
+
+// ============================================================
+// TOAST
+// ============================================================
+let toastTimer;
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type}`;
+  el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.style.display = 'none', type === 'err' ? 5000 : 3000);
+}
+
+// ============================================================
+// MAP INIT
+// ============================================================
+function initMap() {
+  if (mapReady) return;
+  mapReady = true;
+
+  map = L.map('map', { doubleClickZoom: false, zoomControl: true })
+         .setView([-23.8966, 29.4488], 14);
+
+  lightTile = L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    { attribution: '© OpenStreetMap', subdomains: 'abcd', maxZoom: 19 }
+  );
+  darkTile = L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    { attribution: '© OpenStreetMap', subdomains: 'abcd', maxZoom: 19 }
+  );
+
+  if (isNight) darkTile.addTo(map); else lightTile.addTo(map);
+
+  map.on('dblclick', () => {
+    if (!drawMode) return;
+    if (gfPoints.length < 3) { toast('Need at least 3 points', 'err'); return; }
+    finishDrawGeofence();
+  });
+
+  // Auto-refresh every 30 seconds
+setInterval(() => {
+  if (!document.hidden) refreshAll();
+}, 30000);
+
+  loadAll();
+}
+
+async function loadAll() {
+  await loadGeofence();
+  await Promise.all([loadZones(), loadAnimals()]);
+  loadAlerts();
+}
+
+// ============================================================
+// GEOFENCE
+// ============================================================
+async function loadGeofence() {
+  try {
+    const r = await fetch(`${API}/api/tracking/geofence`, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    const d = await r.json();
+    if (d.status === 'success' && d.data && d.data.length > 0) {
+      geofenceData = d.data[0];
+      drawGeofenceOnMap(geofenceData);
+      updateGeofenceStatus(geofenceData);
+    } else {
+      geofenceData = null;
+      document.getElementById('gfStatus').innerHTML =
+        '<span style="color:var(--text3)">⚠️ No geofence set.<br>Click Draw Geofence to create one.</span>';
+      if (geofenceLayer) { map.removeLayer(geofenceLayer); geofenceLayer = null; }
+    }
+  } catch (e) {
+    console.error('loadGeofence:', e);
+    document.getElementById('gfStatus').innerHTML = '❌ Error loading geofence';
+  }
+}
+
+function drawGeofenceOnMap(g) {
+  if (geofenceLayer) { map.removeLayer(geofenceLayer); geofenceLayer = null; }
+  const clat = parseFloat(g.center_latitude);
+  const clon = parseFloat(g.center_longitude);
+  const radius = parseFloat(g.radius_meters);
+  if (isNaN(clat) || isNaN(clon) || isNaN(radius)) return;
+  geofenceLayer = L.circle([clat, clon], {
+    color: '#1D9E75', fillColor: '#1D9E75', fillOpacity: 0.07,
+    radius: radius, weight: 3, dashArray: '8,4'
+  }).addTo(map);
+  geofenceLayer.bindPopup(
+    `<strong>🛡️ ${g.fence_name || 'Farm Boundary'}</strong><br>` +
+    `Radius: ${radius}m<br>Centre: ${clat.toFixed(5)}, ${clon.toFixed(5)}`
+  );
+  map.setView([clat, clon], 14);
+}
+
+function updateGeofenceStatus(g) {
+  document.getElementById('gfStatus').innerHTML =
+    `✅ <strong>${g.fence_name || 'Farm Boundary'}</strong><br>` +
+    `📏 Radius: ${parseFloat(g.radius_meters)}m<br>` +
+    `📍 ${parseFloat(g.center_latitude).toFixed(5)}, ${parseFloat(g.center_longitude).toFixed(5)}`;
+}
+
+function startDrawGeofence() {
+  if (!mapReady) return;
+  if (geofenceData && !confirm('Replace existing geofence?')) return;
+  drawMode = true; gfPoints = [];
+  if (gfPolyline) { map.removeLayer(gfPolyline); gfPolyline = null; }
+  map.getContainer().style.cursor = 'crosshair';
+  map.on('click', onMapClick);
+  document.getElementById('drawIndicator').style.display = 'block';
+  document.getElementById('drawBtn').textContent = '⏹ Cancel Drawing';
+  document.getElementById('drawBtn').onclick = cancelDraw;
+  toast('Click on map to add points · Double-click to finish', 'warn');
+}
+
+function cancelDraw() {
+  stopDrawMode();
+  if (gfPolyline) { map.removeLayer(gfPolyline); gfPolyline = null; }
+  gfPoints = [];
+  document.getElementById('drawBtn').textContent = '✏️ Draw Geofence';
+  document.getElementById('drawBtn').onclick = startDrawGeofence;
+  toast('Drawing cancelled');
+}
+
+function stopDrawMode() {
+  drawMode = false;
+  map.off('click', onMapClick);
+  map.getContainer().style.cursor = '';
+  document.getElementById('drawIndicator').style.display = 'none';
+  document.getElementById('drawBtn').textContent = '✏️ Draw Geofence';
+  document.getElementById('drawBtn').onclick = startDrawGeofence;
+}
+
+function onMapClick(e) {
+  if (!drawMode) return;
+  gfPoints.push(e.latlng);
+  if (gfPolyline) map.removeLayer(gfPolyline);
+  if (gfPoints.length >= 3) {
+    gfPolyline = L.polygon(gfPoints, { color: '#F59E0B', weight: 2, dashArray: '5,5', fillOpacity: 0.05 }).addTo(map);
+  } else if (gfPoints.length === 2) {
+    gfPolyline = L.polyline(gfPoints, { color: '#F59E0B', weight: 2, dashArray: '5,5' }).addTo(map);
+  }
+  toast(`Point ${gfPoints.length} added${gfPoints.length >= 3 ? ' · Double-click to finish' : ''}`, 'warn');
+}
+
+async function finishDrawGeofence() {
+  stopDrawMode();
+  let lat = 0, lng = 0;
+  gfPoints.forEach(p => { lat += p.lat; lng += p.lng; });
+  const clat = lat / gfPoints.length, clon = lng / gfPoints.length;
+  const R = 6371000;
+  let maxD = 0;
+  gfPoints.forEach(p => {
+    const phi1 = clat * Math.PI / 180, phi2 = p.lat * Math.PI / 180;
+    const dphi = (p.lat - clat) * Math.PI / 180, dlam = (p.lng - clon) * Math.PI / 180;
+    const a = Math.sin(dphi/2)**2 + Math.cos(phi1)*Math.cos(phi2)*Math.sin(dlam/2)**2;
+    const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    if (d > maxD) maxD = d;
+  });
+  const radius = Math.max(100, Math.round(maxD));
+  if (gfPolyline) { map.removeLayer(gfPolyline); gfPolyline = null; }
+  gfPoints = [];
+  try {
+    await fetch(`${API}/api/tracking/geofence`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    const r = await fetch(`${API}/api/tracking/geofence`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify({ fence_name: 'Farm Boundary', center_latitude: clat,
+                             center_longitude: clon, radius_meters: radius })
+    });
+    const d = await r.json();
+    if (d.status === 'success') {
+      toast('✅ Geofence saved!');
+      await loadGeofence();
+      await resetPositionsSilent();
+      await Promise.all([loadAnimals(), loadZones()]);
+    } else toast(d.message || 'Error', 'err');
+  } catch (e) { toast('Network error', 'err'); }
+}
+
+async function clearGeofence() {
+  if (!confirm('Clear geofence?')) return;
+  if (geofenceLayer) { map.removeLayer(geofenceLayer); geofenceLayer = null; }
+  geofenceData = null;
+  document.getElementById('gfStatus').innerHTML =
+    '<span style="color:var(--text3)">⚠️ No geofence set.</span>';
+  try {
+    await fetch(`${API}/api/tracking/geofence`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    toast('Geofence cleared');
+  } catch (e) { toast('Cleared locally', 'err'); }
+}
+
+// ============================================================
+// DATA LOADERS
+// ============================================================
+async function loadZones() {
+  try {
+    const r = await fetch(`${API}/api/zones`, { headers: { Authorization: `Bearer ${getToken()}` } });
+    const d = await r.json();
+    if (d.status === 'success') { zones = d.data || []; renderZones(); renderZoneLayers(); }
+  } catch (e) { console.error('loadZones:', e); }
+}
+
+async function loadAnimals() {
+  try {
+    const r = await fetch(`${API}/api/animals`, { headers: { Authorization: `Bearer ${getToken()}` } });
+    const d = await r.json();
+    if (d.status === 'success') {
+      animals = d.data || [];
+      renderMarkers();   // ← updates map dots
+      renderAnimalList(); // ← updates sidebar
+    }
+  } catch (e) { console.error('loadAnimals:', e); }
+}
+
+async function loadAlerts() {
+  try {
+    const r = await fetch(`${API}/api/tracking/alerts`, { headers: { Authorization: `Bearer ${getToken()}` } });
+    const d = await r.json();
+    if (d.status === 'success') renderAlerts(d.data || []);
+  } catch (e) { console.error('loadAlerts:', e); }
+}
+
+async function refreshAll() {
+  toast('Refreshing…');
+  await loadGeofence();
+  if (geofenceData) await repositionOutsideAnimals();
+  await Promise.all([loadZones(), loadAnimals()]);
+  await loadAlerts();
+  toast('✅ Refreshed!');
+}
+
+async function repositionOutsideAnimals() {
+  try {
+    await fetch(`${API}/api/tracking/init-positions`, {
+      method: 'POST', headers: { Authorization: `Bearer ${getToken()}` }
+    });
+  } catch (e) { console.warn('reposition error:', e); }
+}
+
+// ============================================================
+// RESET POSITIONS
+// ============================================================
+async function resetPositions() {
+  if (!confirm('Reset ALL animals to their zones inside the geofence?')) return;
+  toast('Resetting…');
+  try {
+    const r = await fetch(`${API}/api/tracking/reset-positions`, {
+      method: 'POST', headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    const d = await r.json();
+    if (d.status === 'success') {
+      toast(d.message || '✅ Reset done');
+      // Force full reload of animals so markers update
+      await loadAnimals();
+      await loadZones();
+      await loadAlerts();
+    } else toast(d.message || 'Error', 'err');
+  } catch (e) { toast('Network error', 'err'); }
+}
+
+async function resetPositionsSilent() {
+  try {
+    await fetch(`${API}/api/tracking/reset-positions`, {
+      method: 'POST', headers: { Authorization: `Bearer ${getToken()}` }
+    });
+  } catch (e) { console.warn('silent reset error:', e); }
+}
+
+// ============================================================
+// RENDER ZONES
+// ============================================================
+function renderZones() {
+  const el = document.getElementById('zonesList');
+  if (!zones.length) { el.innerHTML = '<div class="empty">No zones yet</div>'; return; }
+  el.innerHTML = zones.map(z => `
+    <div class="zone-card">
+      <div class="zone-card-head" style="border-left-color:${z.color||'#1D9E75'}">
+        <span>${z.zone_name}</span>
+        <span style="font-size:11px;color:var(--text3)">${z.animal_count||0} 🐄</span>
+      </div>
+      <div class="zone-card-body">
+        Type: ${z.zone_type} · Radius: ${z.radius_meters||200}m
+        <br><button class="btn btn-sm btn-danger" style="margin-top:6px"
+          onclick="deleteZone(${z.zone_id})">🗑 Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderZoneLayers() {
+  Object.values(zoneLayers).forEach(l => { try { map.removeLayer(l); } catch(e){} });
+  zoneLayers = {};
+  zones.forEach(z => {
+    if (!z.center_latitude) return;
+    const c = z.color || '#1D9E75';
+    const l = L.circle([+z.center_latitude, +z.center_longitude], {
+      color: c, fillColor: c, fillOpacity: 0.15,
+      radius: +z.radius_meters || 200, weight: 2, dashArray: '6,4'
+    }).addTo(map).bindPopup(`<strong>${z.zone_name}</strong><br>Type: ${z.zone_type}<br>Animals: ${z.animal_count||0}`);
+    zoneLayers[z.zone_id] = l;
+  });
+}
+
+// ============================================================
+// RENDER MARKERS — key fix: always remove ALL old, add ALL new
+// ============================================================
+function markerIcon(color, isAnomaly = false, label = '') {
+  const size = isAnomaly ? 20 : 14;
+  const pulse = isAnomaly
+    ? `animation:pulse 1.2s infinite;box-shadow:0 0 0 0 ${color}99;` : '';
+  return L.divIcon({
+    html: `<div style="background:${color};width:${size}px;height:${size}px;
+           border-radius:50%;border:2px solid #fff;
+           ${pulse}
+           box-shadow:0 2px 6px rgba(0,0,0,.4);
+           display:flex;align-items:center;justify-content:center;
+           font-size:8px;color:#fff;font-weight:700">${label}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size/2, size/2]
+  });
+}
+
+function renderMarkers() {
+  // Remove ALL existing markers from map
+  Object.values(markers).forEach(m => {
+    try { map.removeLayer(m); } catch(e) {}
+  });
+  markers = {};
+
+  animals.forEach(a => {
+    const lat = a.last_latitude;
+    const lon = a.last_longitude;
+
+    if (lat == null || lon == null) {
+      // No GPS — grey marker near geofence centre
+      const clat = geofenceData ? parseFloat(geofenceData.center_latitude) : -23.8966;
+      const clon = geofenceData ? parseFloat(geofenceData.center_longitude) : 29.4488;
+      const icon = markerIcon('#9CA3AF', false, '?');
+      const m = L.marker([clat + (Math.random()-.5)*.002, clon + (Math.random()-.5)*.002], { icon })
+        .addTo(map)
+        .bindPopup(`<strong>${a.animal_tag}</strong><br>📍 No GPS data yet<br>Zone: ${a.zone_name||'Unassigned'}`);
+      markers[a.animal_id] = m;
+      return;
+    }
+
+    const isAnomaly = a.gps_status === 'critical';
+    const isWarning = a.gps_status === 'warning';
+    const color = isAnomaly ? '#EF4444' : isWarning ? '#F59E0B' : '#10B981';
+
+    const icon = markerIcon(color, isAnomaly);
+
+    const speed = a.speed_kmh != null ? a.speed_kmh.toFixed(1) : '—';
+    const anomalyBadge = isAnomaly
+      ? `<br><span style="background:${color};color:#fff;padding:2px 6px;
+         border-radius:4px;font-size:11px;font-weight:700">⚠️ ${a.anomaly_type}</span>`
+      : '';
+
+    const m = L.marker([lat, lon], { icon })
+      .addTo(map)
+      .bindPopup(`
+        <div style="min-width:180px">
+          <strong>${a.species === 'Cattle' ? '🐄' : a.species === 'Goat' ? '🐐' : '🐑'} ${a.animal_tag}</strong><br>
+          Species: ${a.species}<br>
+          Zone: ${a.zone_name || 'Unassigned'}<br>
+          Speed: <strong>${speed} km/h</strong><br>
+          Status: <span style="color:${color};font-weight:600">${a.gps_status || 'normal'}</span>
+          ${anomalyBadge}
+        </div>`);
+
+    markers[a.animal_id] = m;
+  });
+}
+
+// ============================================================
+// ANIMAL LIST (sidebar)
+// ============================================================
+function zoneSelect(a) {
+  const opts = zones.map(z =>
+    `<option value="${z.zone_id}" ${a.zone_id === z.zone_id ? 'selected' : ''}>${z.zone_name}</option>`
+  ).join('');
+  return `<select class="zone-select" onchange="assignZone(${a.animal_id}, this.value)">
+    <option value="">Unassigned</option>${opts}</select>`;
+}
+
+function renderAnimalList() {
+  const el = document.getElementById('animalsList');
+  if (!animals.length) { el.innerHTML = '<div class="empty">No animals found</div>'; return; }
+  let html = '';
+  zones.forEach(z => {
+    const za = animals.filter(a => a.zone_id === z.zone_id);
+    if (!za.length) return;
+    html += `<div class="zone-card">
+      <div class="zone-card-head" style="border-left-color:${z.color||'#1D9E75'}">
+        <span>${z.zone_name}</span>
+        <span style="font-size:11px;color:var(--text3)">${za.length}</span>
+      </div>
+      <div class="zone-card-body">
+        ${za.map(a => {
+          const dc = a.gps_status==='critical'?'dot-crit':a.gps_status==='warning'?'dot-warn':'dot-ok';
+          return `<div class="animal-row">
+            <span><span class="dot ${dc}"></span>${a.animal_tag}
+            ${a.gps_status==='critical' ? ' 🚨' : ''}</span>
+            ${zoneSelect(a)}</div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+  const ua = animals.filter(a => !a.zone_id);
+  if (ua.length) {
+    html += `<div class="zone-card">
+      <div class="zone-card-head" style="border-left-color:#F59E0B">
+        <span>⚠️ Unassigned</span>
+        <span style="font-size:11px;color:var(--text3)">${ua.length}</span>
+      </div>
+      <div class="zone-card-body">
+        ${ua.map(a => {
+          const dc = a.gps_status==='critical'?'dot-crit':a.gps_status==='warning'?'dot-warn':'dot-ok';
+          return `<div class="animal-row">
+            <span><span class="dot ${dc}"></span>${a.animal_tag}
+            ${a.gps_status==='critical' ? ' 🚨' : ''}</span>
+            ${zoneSelect(a)}</div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+  el.innerHTML = html || '<div class="empty">No animals</div>';
+}
+
+async function assignZone(animalId, zoneId) {
+  try {
+    const r = await fetch(`${API}/api/animals/${animalId}/zone`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify({ zone_id: zoneId ? +zoneId : null })
+    });
+    const d = await r.json();
+    if (d.status === 'success') { toast('Zone updated ✅'); loadZones(); loadAnimals(); }
+    else toast(d.message, 'err');
+  } catch (e) { toast('Network error', 'err'); }
+}
+
+// ============================================================
+// ALERTS
+// ============================================================
+function alertClass(t) {
+  if (!t) return '';
+  if (t === 'High Speed') return 'hs';
+  if (t === 'Night Movement') return 'nm';
+  if (t === 'Geofence Breach' || t === 'Erratic Movement') return 'gb';
+  return '';
+}
+function alertCardClass(t) {
+  if (!t) return '';
+  if (t === 'High Speed') return 'hs-card';
+  if (t === 'Night Movement') return 'nm-card';
+  return 'gb-card';
+}
+function formatTime(s) {
+  if (!s) return '';
+  const d = new Date(s);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' +
+         d.toLocaleDateString([], { day: '2-digit', month: 'short' });
+}
+
+function renderAlerts(alerts) {
+  const tot = alerts.length;
+  const unr = alerts.filter(a => !a.is_resolved).length;
+  document.getElementById('statTotal').textContent = tot;
+  document.getElementById('statUnresolved').textContent = unr;
+  document.getElementById('statResolved').textContent = tot - unr;
+
+  const el = document.getElementById('alertsList');
+  if (!tot) { el.innerHTML = '<div class="empty">No anomalies yet 🎉</div>'; return; }
+
+  el.innerHTML = alerts.map(a => `
+    <div class="alert-card ${alertCardClass(a.alert_type)} ${a.is_resolved ? 'resolved' : ''}">
+      <div class="alert-type ${alertClass(a.alert_type)}">${a.alert_type || 'Unknown'}</div>
+      <div class="alert-msg">${a.alert_message}</div>
+      <div class="alert-meta">
+        <span>${formatTime(a.created_at)}</span>
+        ${!a.is_resolved
+          ? `<button class="resolve-btn" onclick="resolveAlert(${a.alert_id})">✓ Resolve</button>`
+          : '<span style="color:var(--green);font-size:11px">✓ Resolved</span>'}
+      </div>
+    </div>`).join('');
+}
+
+async function resolveAlert(id) {
+  try {
+    const r = await fetch(`${API}/api/tracking/alerts/${id}/resolve`, {
+      method: 'PUT', headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    const d = await r.json();
+    if (d.status === 'success') { toast('Alert resolved ✅'); loadAlerts(); }
+    else toast(d.message, 'err');
+  } catch (e) { toast('Network error', 'err'); }
+}
+
+// ============================================================
+// SIMULATE GPS — THE KEY FIX
+// Animals must visually move on map after simulation
+// ============================================================
+async function simulateGPS() {
+  const btn = document.getElementById('simBtn');
+  const bar = document.getElementById('simProgress');
+
+  // Disable button + show progress bar
+  btn.disabled = true;
+  btn.textContent = '⏳ Simulating…';
+  bar.style.display = 'block';
+  bar.style.width = '30%';
+
+  try {
+    const r = await fetch(`${API}/api/tracking/simulate`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+
+    bar.style.width = '70%';
+    const d = await r.json();
+
+    if (d.status === 'success') {
+      bar.style.width = '90%';
+
+      // ── CRITICAL: reload animals from DB so last_latitude/longitude are fresh ──
+      await loadAnimals();   // this calls renderMarkers() → dots move on map
+      await loadZones();
+      await loadAlerts();
+
+      bar.style.width = '100%';
+      setTimeout(() => { bar.style.display = 'none'; bar.style.width = '0'; }, 500);
+
+      const cnt = d.data?.anomaly_count || 0;
+      if (cnt > 0) {
+        toast(`🚨 ${cnt} ANOMAL${cnt > 1 ? 'IES' : 'Y'} DETECTED!`, 'err');
+
+        // Pan to first anomalous animal and open popup
+        const first = d.data.anomalies?.[0];
+        if (first) {
+          setTimeout(() => {
+            if (markers[first.animal_id]) {
+              map.flyTo([first.latitude, first.longitude], 16, { duration: 1 });
+              setTimeout(() => markers[first.animal_id].openPopup(), 1100);
+            }
+          }, 500);
+        }
+      } else {
+        toast(`✅ GPS simulated — all ${d.data?.simulated?.length || 0} animals normal`);
+      }
+
+    } else {
+      bar.style.display = 'none';
+      bar.style.width = '0';
+      toast(d.message || 'Simulation error', 'err');
+    }
+
+  } catch (e) {
+    bar.style.display = 'none';
+    bar.style.width = '0';
+    toast('Network error during simulation', 'err');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ Simulate GPS';
+  }
+}
+
+// ============================================================
+// ZONE MODAL
+// ============================================================
+function openZoneModal() { document.getElementById('zoneModal').classList.add('open'); }
+function closeZoneModal() {
+  document.getElementById('zoneModal').classList.remove('open');
+  document.getElementById('zoneName').value = '';
+  document.getElementById('zoneRadius').value = 300;
+  document.getElementById('locHint').textContent = 'No location picked — defaults to map centre';
+  pickedLoc = null;
+  if (pickerMarker) { map.removeLayer(pickerMarker); pickerMarker = null; }
+}
+
+function pickZoneLocation() {
+  closeZoneModal();
+  toast('Click on map to set zone centre', 'warn');
+  map.getContainer().style.cursor = 'crosshair';
+  map.once('click', e => {
+    pickedLoc = e.latlng;
+    map.getContainer().style.cursor = '';
+    if (pickerMarker) map.removeLayer(pickerMarker);
+    pickerMarker = L.circleMarker(e.latlng, {
+      radius: 8, color: '#1D9E75', fillColor: '#1D9E75', fillOpacity: 1
+    }).addTo(map);
+    openZoneModal();
+    document.getElementById('locHint').textContent =
+      `✅ ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+  });
+}
+
+async function createZone() {
+  const name = document.getElementById('zoneName').value.trim();
+  const type = document.getElementById('zoneType').value;
+  const color = document.getElementById('zoneColor').value;
+  const radius = +document.getElementById('zoneRadius').value || 300;
+  if (!name) { toast('Zone name required', 'err'); return; }
+  const centre = pickedLoc || map.getCenter();
+  try {
+    const r = await fetch(`${API}/api/zones`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify({
+        zone_name: name, zone_type: type,
+        center_latitude: centre.lat, center_longitude: centre.lng,
+        radius_meters: radius, color
+      })
+    });
+    const d = await r.json();
+    if (d.status === 'success') {
+      toast('✅ Zone created!');
+      if (pickerMarker) { map.removeLayer(pickerMarker); pickerMarker = null; }
+      pickedLoc = null;
+      closeZoneModal();
+      await loadZones();
+      await loadAnimals();
+    } else toast(d.message || 'Error', 'err');
+  } catch (e) { toast('Network error', 'err'); }
+}
+
+async function deleteZone(id) {
+  if (!confirm('Delete zone?')) return;
+  try {
+    const r = await fetch(`${API}/api/zones/${id}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    const d = await r.json();
+    if (d.status === 'success') { toast('Zone deleted'); loadZones(); loadAnimals(); }
+    else toast(d.message || 'Error', 'err');
+  } catch (e) { toast('Network error', 'err'); }
+}
+
+// ============================================================
+// BOOT
+// ============================================================
+requireLogin();
+autoNight();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => setTimeout(initMap, 300));
+} else {
+  setTimeout(initMap, 300);
+}
+</script>
+</body>
+</html>

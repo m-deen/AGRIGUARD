@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriGuard - Register New Animal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f5f5 0%, #e8ecef 100%);
+            min-height: 100vh;
+        }
+        
+        /* Navbar */
+        .navbar {
+            background: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+            gap: 15px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1D9E75;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-links a {
+            text-decoration: none;
+            color: #374151;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .nav-links a:hover {
+            background: #f3f4f6;
+        }
+        
+        .nav-links a.active {
+            background: #1D9E75;
+            color: white;
+            border: 2px solid #0f6e56;
+        }
+        
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+        
+        /* Container */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        
+        /* Card */
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 35px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+        }
+        
+        .card-header {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .card-header h1 {
+            font-size: 28px;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-header p {
+            color: #6b7280;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        
+        /* Form */
+        .form-group {
+            margin-bottom: 22px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+        }
+        
+        .form-group label .required {
+            color: #ef4444;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.2s;
+            background: white;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #1D9E75;
+            box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.1);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        /* Photo Upload */
+        .photo-upload {
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f9fafb;
+        }
+        
+        .photo-upload:hover {
+            border-color: #1D9E75;
+            background: #f0fdf4;
+        }
+        
+        .photo-preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin-top: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        
+        .btn-primary {
+            background: #1D9E75;
+            color: white;
+            width: 100%;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: #0f6e56;
+            transform: translateY(-1px);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .form-actions .btn-secondary {
+            flex: 0.3;
+        }
+        
+        .form-actions .btn-primary {
+            flex: 0.7;
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #1D9E75;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .toast.error {
+            background: #ef4444;
+        }
+        
+        /* Help Text */
+        .help-text {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+            .container {
+                padding: 15px;
+            }
+            .card {
+                padding: 20px;
+            }
+            .nav-links {
+                justify-content: center;
+            }
+            .form-actions {
+                flex-direction: column;
+            }
+            .form-actions .btn-secondary,
+            .form-actions .btn-primary {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">🌾 AgriGuard</div>
+        <div class="nav-links">
+            <a href="dashboard.html">📊 Dashboard</a>
+            <a href="animals.html">🐄 My Animals</a>
+            <a href="add-animal.html" class="active">➕ Add Animal</a>
+            <a href="vaccinations.html">💉 Vaccinations</a>
+            <a href="health.html">🏥 Health</a>
+            <a href="tracking.html">📍 Tracking</a>
+            <a href="auctions.html">💰 Auctions</a>
+            <a href="chat-bot.html">🤖 AI Chat</a>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1>➕ Register New Animal</h1>
+                <p>Add livestock to your farm inventory. Fields marked with <span class="required">*</span> are required.</p>
+            </div>
+
+            <form id="addAnimalForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Ear Tag ID <span class="required">*</span></label>
+                        <input type="text" id="animalTag" required placeholder="e.g., AG-001 or ZA-LP-001">
+                        <div class="help-text">Unique identifier for your animal</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Species <span class="required">*</span></label>
+                        <select id="species" required>
+                            <option value="">Select species</option>
+                            <option value="Cattle">🐄 Cattle</option>
+                            <option value="Goat">🐐 Goat</option>
+                            <option value="Sheep">🐑 Sheep</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Breed</label>
+                        <input type="text" id="breed" placeholder="e.g., Nguni, Angus, Boer Goat">
+                        <div class="help-text">Optional - helps with breed identification</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <select id="gender">
+                            <option value="">Select</option>
+                            <option value="Male">♂ Male (Bull/Ram/Buck)</option>
+                            <option value="Female">♀ Female (Cow/Ewe/Doe)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" id="dateOfBirth">
+                        <div class="help-text">Helps track age and vaccination schedule</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Weight (kg)</label>
+                        <input type="number" id="weight" step="0.01" placeholder="e.g., 450">
+                        <div class="help-text">Current weight in kilograms</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Color / Markings</label>
+                    <input type="text" id="colorMarkings" placeholder="e.g., Black with white patch on forehead">
+                    <div class="help-text">Distinctive features for easy identification</div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Purchase Price (R)</label>
+                        <input type="number" id="purchasePrice" step="0.01" placeholder="e.g., 8500">
+                        <div class="help-text">Amount paid when acquired</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Purchase Date</label>
+                        <input type="date" id="purchaseDate">
+                        <div class="help-text">When you acquired this animal</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>📸 Animal Photo</label>
+                    <div class="photo-upload" onclick="document.getElementById('photoInput').click()">
+                        📤 Click or drag to upload photo
+                        <div class="help-text" style="margin-top: 8px;">JPEG or PNG, max 5MB</div>
+                        <input type="file" id="photoInput" accept="image/jpeg,image/png" style="display: none;">
+                    </div>
+                    <img id="photoPreview" class="photo-preview" style="display: none;">
+                </div>
+
+                <div class="form-group">
+                    <label>📝 Additional Notes</label>
+                    <textarea id="notes" rows="3" placeholder="Health history, temperament, parentage, or any other important information..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="goBack()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">✓ Register Animal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+        
+        function getToken() {
+            return localStorage.getItem('agriguard_token');
+        }
+        
+        function getUser() {
+            const user = localStorage.getItem('agriguard_user');
+            return user ? JSON.parse(user) : null;
+        }
+        
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+        
+        function logout() {
+            localStorage.removeItem('agriguard_token');
+            localStorage.removeItem('agriguard_user');
+            window.location.href = '../login.html';
+        }
+        
+        function goBack() {
+            window.location.href = 'animals.html';
+        }
+        
+        function requireLogin() {
+            if (!getToken()) {
+                window.location.href = '../login.html';
+            }
+            const user = getUser();
+            if (user && user.role !== 'farmer' && user.role !== 'admin') {
+                showToast('Access denied. Farmers only.', 'error');
+                setTimeout(() => window.location.href = 'dashboard.html', 2000);
+            }
+        }
+        
+        // Photo preview
+        document.getElementById('photoInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validate file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    showToast('File too large. Maximum 5MB.', 'error');
+                    return;
+                }
+                // Validate file type
+                if (!file.type.match('image/jpeg') && !file.type.match('image/png')) {
+                    showToast('Only JPEG and PNG images are allowed.', 'error');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const preview = document.getElementById('photoPreview');
+                    preview.src = event.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Form validation
+        function validateForm() {
+            const animalTag = document.getElementById('animalTag').value.trim();
+            const species = document.getElementById('species').value;
+            
+            if (!animalTag) {
+                showToast('Please enter an Ear Tag ID', 'error');
+                return false;
+            }
+            if (!species) {
+                showToast('Please select a species', 'error');
+                return false;
+            }
+            return true;
+        }
+        
+        // Submit form
+        document.getElementById('addAnimalForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!validateForm()) return;
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Registering...';
+            
+            const animalData = {
+                animal_tag: document.getElementById('animalTag').value.trim().toUpperCase(),
+                species: document.getElementById('species').value,
+                breed: document.getElementById('breed').value,
+                gender: document.getElementById('gender').value,
+                date_of_birth: document.getElementById('dateOfBirth').value || null,
+                weight_kg: parseFloat(document.getElementById('weight').value) || null,
+                color_markings: document.getElementById('colorMarkings').value,
+                purchase_price: parseFloat(document.getElementById('purchasePrice').value) || null,
+                purchase_date: document.getElementById('purchaseDate').value || null,
+                notes: document.getElementById('notes').value
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/animals`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getToken()}`
+                    },
+                    body: JSON.stringify(animalData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success' || result.success === true) {
+                    showToast('✅ Animal registered successfully! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'animals.html';
+                    }, 1500);
+                } else {
+                    showToast(result.message || 'Error registering animal', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Network error. Make sure Flask is running on port 5000', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        });
+        
+        // Initialize
+        requireLogin();
+        
+        // Set default date of birth (optional - can remove)
+        // document.getElementById('dateOfBirth').valueAsDate = new Date();
+    </script>
+</body>
+</html>

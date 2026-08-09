@@ -1,0 +1,420 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriGuard - My Bid History</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        .navbar {
+            background: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1D9E75;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-links a {
+            text-decoration: none;
+            color: #374151;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .nav-links a:hover {
+            background: #f3f4f6;
+        }
+        
+        .nav-links a.active {
+            background: #1D9E75;
+            color: white;
+            border: 2px solid #0f6e56;
+        }
+        
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        
+        .page-header {
+            margin-bottom: 25px;
+        }
+        
+        .page-header h1 {
+            font-size: 28px;
+            color: #111827;
+        }
+        
+        .page-header p {
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1D9E75;
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 15px;
+            font-weight: 600;
+            color: #6b7280;
+        }
+        
+        .tab.active {
+            color: #1D9E75;
+            border-bottom: 2px solid #1D9E75;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 14px 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        th {
+            font-weight: 600;
+            color: #374151;
+            background: #f9fafb;
+        }
+        
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .badge-winning {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-lost {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .badge-active {
+            background: #fed7aa;
+            color: #92400e;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: #6b7280;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #1D9E75;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .nav-links {
+                justify-content: center;
+            }
+            th, td {
+                padding: 8px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">🌾 AgriGuard</div>
+        <div class="nav-links">
+            <a href="../farmer/dashboard.html">📊 Dashboard</a>
+            <a href="auctions.html">💰 Browse Auctions</a>
+            <a href="bid-history.html" class="active">📜 My Bids</a>
+            <a href="watchlist.html">⭐ Watchlist</a>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="container">
+        <div class="page-header">
+            <div>
+                <h1>📜 My Bid History</h1>
+                <p>Track all your auction bids</p>
+            </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value" id="totalBids">0</div>
+                <div class="stat-label">Total Bids</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="activeBids">0</div>
+                <div class="stat-label">Active Bids</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="winningBids">0</div>
+                <div class="stat-label">Winning</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="lostBids">0</div>
+                <div class="stat-label">Lost</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('all')">All Bids</button>
+            <button class="tab" onclick="switchTab('active')">Active</button>
+            <button class="tab" onclick="switchTab('won')">Won</button>
+            <button class="tab" onclick="switchTab('lost')">Lost</button>
+        </div>
+
+        <!-- Bids Table -->
+        <div class="card">
+            <div class="table-wrapper">
+                <div id="bidsTable"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+        let currentTab = 'all';
+        
+        // Demo bid data - replace with API call when ready
+        let bids = [
+            { id: 1, auction_title: 'Nguni Bull - 4 years', auction_id: 1, amount: 8500, bid_date: '2026-05-03', status: 'active', species: 'Cattle' },
+            { id: 2, auction_title: 'Bonsmara Cow', auction_id: 2, amount: 7800, bid_date: '2026-05-02', status: 'outbid', species: 'Cattle' },
+            { id: 3, auction_title: 'Boer Goat Buck', auction_id: 3, amount: 3200, bid_date: '2026-04-28', status: 'won', species: 'Goat' },
+            { id: 4, auction_title: 'Dorper Ewe', auction_id: 4, amount: 2800, bid_date: '2026-04-25', status: 'won', species: 'Sheep' },
+            { id: 5, auction_title: 'Angus Steer', auction_id: 5, amount: 5500, bid_date: '2026-04-20', status: 'lost', species: 'Cattle' }
+        ];
+        
+        function getToken() { return localStorage.getItem('agriguard_token'); }
+        
+        function getUser() {
+            const user = localStorage.getItem('agriguard_user');
+            return user ? JSON.parse(user) : null;
+        }
+        
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.background = isError ? '#ef4444' : '#1D9E75';
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 3000);
+        }
+        
+        function logout() {
+            localStorage.removeItem('agriguard_token');
+            localStorage.removeItem('agriguard_user');
+            localStorage.removeItem('agriguard_role');
+            window.location.href = '../login.html';
+        }
+        
+        function requireLogin() {
+            if (!getToken()) {
+                window.location.href = '../login.html';
+            }
+        }
+        
+        function updateStats() {
+            const total = bids.length;
+            const active = bids.filter(b => b.status === 'active').length;
+            const won = bids.filter(b => b.status === 'won').length;
+            const lost = bids.filter(b => b.status === 'lost' || b.status === 'outbid').length;
+            
+            document.getElementById('totalBids').textContent = total;
+            document.getElementById('activeBids').textContent = active;
+            document.getElementById('winningBids').textContent = won;
+            document.getElementById('lostBids').textContent = lost;
+        }
+        
+        function getStatusBadge(status) {
+            const badges = {
+                'active': '<span class="badge badge-active">Active</span>',
+                'won': '<span class="badge badge-winning">Won</span>',
+                'lost': '<span class="badge badge-lost">Lost</span>',
+                'outbid': '<span class="badge badge-lost">Outbid</span>'
+            };
+            return badges[status] || '<span class="badge">Unknown</span>';
+        }
+        
+        function renderBids() {
+            let filtered = bids;
+            
+            if (currentTab === 'active') {
+                filtered = bids.filter(b => b.status === 'active');
+            } else if (currentTab === 'won') {
+                filtered = bids.filter(b => b.status === 'won');
+            } else if (currentTab === 'lost') {
+                filtered = bids.filter(b => b.status === 'lost' || b.status === 'outbid');
+            }
+            
+            const container = document.getElementById('bidsTable');
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty-state">📭 No bids found</div>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Auction</th>
+                            <th>Species</th>
+                            <th>Bid Amount</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filtered.map(bid => `
+                            <tr>
+                                <td><strong>${bid.auction_title}</strong></td>
+                                <td>${bid.species}</td>
+                                <td><strong>R${bid.amount.toLocaleString()}</strong></td>
+                                <td>${bid.bid_date}</td>
+                                <td>${getStatusBadge(bid.status)}</td>
+                                <td>
+                                    ${bid.status === 'active' ? 
+                                        `<button onclick="viewAuction(${bid.auction_id})" style="padding: 6px 12px; background: #1D9E75; color: white; border: none; border-radius: 6px; cursor: pointer;">View Auction</button>` : 
+                                        '-'}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach((t, i) => {
+                t.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            renderBids();
+        }
+        
+        function viewAuction(auctionId) {
+            window.location.href = `auctions.html?id=${auctionId}`;
+        }
+        
+        // Initialize
+        requireLogin();
+        updateStats();
+        renderBids();
+    </script>
+</body>
+</html>

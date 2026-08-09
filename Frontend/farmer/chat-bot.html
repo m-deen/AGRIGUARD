@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriGuard - AI Chat Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Navbar */
+        .navbar {
+            background: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1D9E75;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-links a {
+            text-decoration: none;
+            color: #374151;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .nav-links a:hover {
+            background: #f3f4f6;
+        }
+        
+        .nav-links a.active {
+            background: #1D9E75;
+            color: white;
+            border: 2px solid #0f6e56;
+        }
+        
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+        
+        /* Chat Layout */
+        .chat-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        /* Sidebar */
+        .chat-sidebar {
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .sidebar-section {
+            margin-bottom: 24px;
+        }
+        
+        .sidebar-label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #9ca3af;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+        
+        .lang-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .lang-btn {
+            padding: 6px 14px;
+            border: 1px solid #e5e7eb;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            background: white;
+            color: #374151;
+            transition: all 0.2s;
+        }
+        
+        .lang-btn:hover {
+            border-color: #1D9E75;
+            background: #e1f5ee;
+        }
+        
+        .lang-btn.active {
+            background: #1D9E75;
+            color: white;
+            border-color: #0f6e56;
+        }
+        
+        .topic-item {
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            color: #374151;
+            margin-bottom: 6px;
+            transition: all 0.2s;
+            background: #f9fafb;
+        }
+        
+        .topic-item:hover {
+            background: #e1f5ee;
+            color: #1D9E75;
+            transform: translateX(2px);
+        }
+        
+        .animal-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f9fafb;
+        }
+        
+        .animal-item:hover {
+            background: #e1f5ee;
+        }
+        
+        .btn-full {
+            width: 100%;
+            margin-top: 16px;
+        }
+        
+        /* Chat Main */
+        .chat-main {
+            display: flex;
+            flex-direction: column;
+            background: #f9fafb;
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        
+        .chat-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #e1f5ee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .chat-status {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10B981;
+        }
+        
+        /* Messages */
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .message-row {
+            display: flex;
+        }
+        
+        .message-row.bot {
+            justify-content: flex-start;
+        }
+        
+        .message-row.user {
+            justify-content: flex-end;
+        }
+        
+        .message-bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .message-row.bot .message-bubble {
+            background: white;
+            color: #374151;
+            border-radius: 0 18px 18px 18px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        
+        .message-row.user .message-bubble {
+            background: #1D9E75;
+            color: white;
+            border-radius: 18px 0 18px 18px;
+        }
+        
+        .message-time {
+            font-size: 10px;
+            margin-top: 5px;
+            opacity: 0.6;
+        }
+        
+        .message-row.user .message-time {
+            text-align: right;
+        }
+        
+        /* Typing Indicator */
+        .typing-indicator {
+            display: inline-flex;
+            gap: 4px;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 0 18px 18px 18px;
+        }
+        
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #9ca3af;
+            animation: typing 1.2s infinite ease-in-out;
+        }
+        
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-8px); }
+        }
+        
+        /* Chips */
+        .chat-chips {
+            padding: 12px 20px;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+        
+        .chip {
+            padding: 6px 14px;
+            border: 1px solid #e5e7eb;
+            border-radius: 20px;
+            font-size: 12px;
+            background: white;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .chip:hover {
+            border-color: #1D9E75;
+            background: #e1f5ee;
+            color: #1D9E75;
+        }
+        
+        /* Input Bar */
+        .chat-input-bar {
+            padding: 16px 20px;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        .chat-input-bar input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 24px;
+            font-size: 14px;
+            outline: none;
+        }
+        
+        .chat-input-bar input:focus {
+            border-color: #1D9E75;
+            box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.1);
+        }
+        
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            background: #1D9E75;
+            border: none;
+            border-radius: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        
+        .send-btn:hover {
+            background: #0f6e56;
+        }
+        
+        /* Buttons */
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #1D9E75;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .toast.error {
+            background: #ef4444;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .chat-layout {
+                grid-template-columns: 1fr;
+            }
+            .chat-sidebar {
+                display: none;
+            }
+            .nav-links {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">🌾 AgriGuard</div>
+        <div class="nav-links">
+            <a href="dashboard.html">📊 Dashboard</a>
+            <a href="animals.html">🐄 My Animals</a>
+            <a href="add-animal.html">➕ Add Animal</a>
+            <a href="vaccinations.html">💉 Vaccinations</a>
+            <a href="health.html">🏥 Health</a>
+            <a href="tracking.html">📍 Tracking</a>
+            <a href="auctions.html">💰 Auctions</a>
+            <a href="chat-bot.html" class="active">🤖 AI Chat</a>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="chat-layout">
+        <!-- Sidebar -->
+        <div class="chat-sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-label">🌐 Language</div>
+                <div class="lang-buttons">
+                    <button class="lang-btn active" onclick="setLanguage('EN', this)">English</button>
+                    <button class="lang-btn" onclick="setLanguage('ZU', this)">isiZulu</button>
+                    <button class="lang-btn" onclick="setLanguage('ST', this)">Sesotho</button>
+                    <button class="lang-btn" onclick="setLanguage('AF', this)">Afrikaans</button>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-label">💡 Quick Topics</div>
+                <div id="topicsList"></div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-label">🐄 Your Animals</div>
+                <div id="animalSidebar"></div>
+            </div>
+
+            <button class="btn-secondary btn-full" onclick="clearChat()">🗑 Clear Chat</button>
+        </div>
+
+        <!-- Chat Main -->
+        <div class="chat-main">
+            <div class="chat-header">
+                <div class="chat-avatar">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <div style="font-weight: 700;">AgriGuard AI Assistant</div>
+                    <div style="font-size: 12px; color: #6b7280;" id="langLabel">Responding in English</div>
+                </div>
+                <div class="chat-status">
+                    <div class="status-dot"></div>
+                    <span style="font-size: 12px; color: #6b7280;">Online</span>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chatMessages"></div>
+
+            <div class="chat-chips" id="chipBar"></div>
+
+            <div class="chat-input-bar">
+                <input type="text" id="chatInput" placeholder="Ask me anything about livestock farming..." onkeypress="handleKeyPress(event)">
+                <button class="send-btn" onclick="sendMessage()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"/>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+        let currentLanguage = 'EN';
+        let messages = [];
+        
+        function getToken() { return localStorage.getItem('agriguard_token'); }
+        
+        function getUser() { 
+            const user = localStorage.getItem('agriguard_user');
+            return user ? JSON.parse(user) : null;
+        }
+        
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${isError ? 'error' : ''}`;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+        
+        function logout() {
+            localStorage.removeItem('agriguard_token');
+            localStorage.removeItem('agriguard_user');
+            localStorage.removeItem('agriguard_role');
+            window.location.href = '../login.html';
+        }
+        
+        function requireLogin() {
+            if (!getToken()) {
+                window.location.href = '../login.html';
+            }
+        }
+        
+        // Demo animals data
+        let demoAnimals = [
+            { id: 1, name: 'Themba', tag: 'AG-001', species: 'Cattle', breed: 'Nguni' },
+            { id: 2, name: 'Nala', tag: 'AG-002', species: 'Cattle', breed: 'Bonsmara' },
+            { id: 3, name: 'Simba', tag: 'AG-003', species: 'Goat', breed: 'Boer Goat' },
+            { id: 4, name: 'Zuri', tag: 'AG-004', species: 'Sheep', breed: 'Dorper' }
+        ];
+        
+        // Quick topics
+        const quickTopics = [
+            '💉 Anthrax vaccination schedule',
+            '🐄 Tell me about Nguni cattle',
+            '🐐 Boer Goat care guide',
+            '💰 Current market prices',
+            '🌾 Feeding recommendations',
+            '🏷️ How to list an auction',
+            '🤒 My animal seems sick',
+            '📍 How does GPS tracking work?'
+        ];
+        
+        // AI Response function
+        function getAIResponse(question, language) {
+            const q = question.toLowerCase();
+            
+            if (q.includes('vaccin') || q.includes('anthrax') || q.includes('schedule')) {
+                return "💉 **Vaccination Schedule**\n\n• Anthrax: Annually (1 ml subcutaneous)\n• Botulism: Annually (5 ml subcutaneous)\n• Blackquarter: 6 months then annually\n• Lumpy Skin Disease: Annually\n• Brucellosis: Once for heifers (4-8 months)\n\n📌 Log vaccinations in the Health module to receive SMS/Email reminders 3 days before due dates.";
+            }
+            
+            if (q.includes('nguni')) {
+                return "🐄 **Nguni Cattle**\n\nSouth Africa's most popular indigenous breed. They are extremely hardy, disease-resistant, and adapted to harsh conditions.\n\n• Weight: 280-420 kg\n• Excellent tick resistance\n• Low maintenance\n• Good fertility rates\n\nPerfect for Limpopo climate!";
+            }
+            
+            if (q.includes('boer goat')) {
+                return "🐐 **Boer Goat**\n\nThe premier meat goat breed from South Africa.\n\n• Does: 60-90 kg\n• Bucks: 100-135 kg\n• Excellent growth rate\n• Can breed year-round\n• Highly adaptable\n\nRegular deworming every 6-8 weeks is recommended.";
+            }
+            
+            if (q.includes('price') || q.includes('market') || q.includes('cost')) {
+                return "💰 **Current Market Prices** (Estimated)\n\n🐄 Cattle:\n• Nguni bull: R7,500 - R11,000\n• Bonsmara cow: R8,000 - R14,000\n\n🐐 Goats:\n• Boer Goat buck: R2,500 - R4,500\n• Boer Goat doe: R1,800 - R3,200\n\n🐑 Sheep:\n• Dorper ram: R2,500 - R5,000\n\n*Prices vary by weight, age, and condition. Check active auctions for current bids.*";
+            }
+            
+            if (q.includes('feed')) {
+                return "🌾 **Feeding Recommendations**\n\n🐄 Cattle:\n• Natural veld grazing\n• Phosphate lick in summer\n• Energy lick in winter\n\n🐐 Goats:\n• Browse and mixed pasture\n• 150-200g protein supplement daily\n\n🐑 Sheep:\n• Mixed pasture with legumes\n• Mineral supplementation essential\n\nAlways provide clean, fresh water!";
+            }
+            
+            if (q.includes('auction') || q.includes('list')) {
+                return "🏷️ **How to List an Auction**\n\n1. Go to Auctions page\n2. Click 'Create Listing'\n3. Select an animal\n4. Set starting price\n5. Choose duration (1-7 days)\n6. Click 'Publish'\n\nBuyers can then place real-time bids. You'll be notified when auction ends!";
+            }
+            
+            if (q.includes('sick') || q.includes('health')) {
+                return "🤒 **Health Warning Signs**\n\nCommon symptoms to watch:\n• Loss of appetite\n• Unusual behavior/lethargy\n• Discharge from eyes/nose\n• Laboured breathing\n• Diarrhea\n• Limping\n\n⚠️ Isolate the animal and contact a veterinarian immediately for proper diagnosis.";
+            }
+            
+            if (q.includes('gps') || q.includes('track')) {
+                return "📍 **GPS Tracking**\n\nAgriGuard simulates animal locations to help you monitor movement and detect theft.\n\n• Real-time positions on map\n• Color-coded markers (green=normal, orange=warning, red=critical)\n• Geofence alerts when animals leave boundaries\n• Anomaly detection for unusual movement\n\nClick 'Simulate GPS Data' on the Tracking page to update positions.";
+            }
+            
+            return "👋 I'm here to help with livestock management! Try asking about:\n\n• 💉 Vaccination schedules\n• 🐄 Breed information (Nguni, Bonsmara, Boer Goat)\n• 💰 Market prices\n• 🌾 Feeding recommendations\n• 🏷️ Auction listings\n• 🤒 Animal health\n• 📍 GPS tracking\n\nWhat would you like to know?";
+        }
+        
+        function addMessage(role, text) {
+            messages.push({ role, text, time: new Date() });
+            renderMessages();
+        }
+        
+        function renderMessages() {
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = messages.map(m => `
+                <div class="message-row ${m.role}">
+                    <div class="message-bubble">
+                        ${m.role === 'bot' ? m.text.replace(/\n/g, '<br>') : m.text}
+                        <div class="message-time">${m.time.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                    </div>
+                </div>
+            `).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function showTyping() {
+            const container = document.getElementById('chatMessages');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message-row bot';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="typing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            `;
+            container.appendChild(typingDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function hideTyping() {
+            const typing = document.getElementById('typingIndicator');
+            if (typing) typing.remove();
+        }
+        
+        async function sendMessage(question = null) {
+            const input = document.getElementById('chatInput');
+            const message = question || input.value.trim();
+            
+            if (!message) return;
+            
+            input.value = '';
+            addMessage('user', message);
+            showTyping();
+            
+            // Simulate AI thinking
+            setTimeout(() => {
+                hideTyping();
+                const response = getAIResponse(message, currentLanguage);
+                addMessage('bot', response);
+                updateChips(message);
+            }, 800 + Math.random() * 500);
+        }
+        
+        function updateChips(lastMessage) {
+            const chipBar = document.getElementById('chipBar');
+            const suggestions = [
+                '💉 Tell me about vaccines',
+                '🐄 Nguni cattle info',
+                '💰 Current prices',
+                '🌾 Feeding guide',
+                '🏷️ How to sell livestock'
+            ];
+            chipBar.innerHTML = suggestions.map(s => `<button class="chip" onclick="sendMessage('${s}')">${s}</button>`).join('');
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+        
+        function setLanguage(lang, btn) {
+            currentLanguage = lang;
+            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const labels = { EN: 'English', ZU: 'isiZulu', ST: 'Sesotho', AF: 'Afrikaans' };
+            document.getElementById('langLabel').textContent = `Responding in ${labels[lang]}`;
+            if (lang !== 'EN') {
+                showToast(`${labels[lang]} support coming soon. Using English for now.`);
+            }
+        }
+        
+        function clearChat() {
+            messages = [];
+            renderMessages();
+            addMessage('bot', "👋 Chat cleared! How can I help you with your livestock management today?");
+        }
+        
+        // Populate sidebar
+        function populateSidebar() {
+            const topicsContainer = document.getElementById('topicsList');
+            topicsContainer.innerHTML = quickTopics.map(topic => 
+                `<div class="topic-item" onclick="sendMessage('${topic.replace(/'/g, "\\'")}')">${topic}</div>`
+            ).join('');
+            
+            const animalContainer = document.getElementById('animalSidebar');
+            const user = getUser();
+            if (demoAnimals.length > 0) {
+                animalContainer.innerHTML = demoAnimals.map(animal => `
+                    <div class="animal-item" onclick="sendMessage('Tell me about ${animal.breed} breed')">
+                        <span>${animal.species === 'Cattle' ? '🐄' : animal.species === 'Goat' ? '🐐' : '🐑'}</span>
+                        <div>
+                            <div style="font-size: 13px; font-weight: 500;">${animal.name}</div>
+                            <div style="font-size: 11px; color: #6b7280;">${animal.breed}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                animalContainer.innerHTML = '<div style="font-size: 12px; color: #6b7280;">No animals yet. Add your first animal.</div>';
+            }
+        }
+        
+        // Initialize
+        requireLogin();
+        populateSidebar();
+        updateChips('');
+        
+        // Welcome message
+        const user = getUser();
+        setTimeout(() => {
+            addMessage('bot', `👋 **Welcome ${user?.first_name || 'Farmer'}!**\n\nI'm your AI livestock assistant. Ask me about:\n\n• 💉 Vaccination schedules\n• 🐄 Breed information\n• 💰 Market prices\n• 🌾 Feeding tips\n• 🏷️ Auction help\n• 🤒 Animal health\n\nWhat would you like to know today?`);
+        }, 500);
+    </script>
+</body>
+</html>

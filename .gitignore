@@ -1,0 +1,26 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.env
+.env.*
+
+# ML / local artifacts
+*.pkl
+Backend/ml/models/
+ml/models/
+
+# Node / frontend
+node_modules/
+dist/
+.cache/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.cursor/
+.vscode/
+*.log

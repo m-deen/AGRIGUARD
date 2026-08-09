@@ -1,0 +1,442 @@
+ 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriGuard - My Watchlist</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        .navbar {
+            background: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1D9E75;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-links a {
+            text-decoration: none;
+            color: #374151;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .nav-links a:hover {
+            background: #f3f4f6;
+        }
+        
+        .nav-links a.active {
+            background: #1D9E75;
+            color: white;
+            border: 2px solid #0f6e56;
+        }
+        
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .page-header h1 {
+            font-size: 28px;
+            color: #111827;
+        }
+        
+        .page-header p {
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 80px;
+            color: #6b7280;
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        .watchlist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        
+        .watchlist-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        
+        .watchlist-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .watchlist-image {
+            background: #f3f4f6;
+            height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            position: relative;
+        }
+        
+        .remove-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+        
+        .remove-btn:hover {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+        
+        .watchlist-details {
+            padding: 16px;
+        }
+        
+        .watchlist-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .watchlist-meta {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 12px;
+        }
+        
+        .bid-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 12px;
+        }
+        
+        .current-bid {
+            font-size: 22px;
+            font-weight: 800;
+            color: #1D9E75;
+        }
+        
+        .time-left {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #fee2e2;
+            color: #991b1b;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .bid-button {
+            width: 100%;
+            padding: 10px;
+            background: #1D9E75;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .bid-button:hover {
+            background: #0f6e56;
+        }
+        
+        .added-date {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #1D9E75;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+        }
+        
+        .toast.error {
+            background: #ef4444;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            .watchlist-grid {
+                grid-template-columns: 1fr;
+            }
+            .nav-links {
+                justify-content: center;
+            }
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">🌾 AgriGuard</div>
+        <div class="nav-links">
+            <a href="../farmer/dashboard.html">📊 Dashboard</a>
+            <a href="auctions.html">💰 Browse Auctions</a>
+            <a href="bid-history.html">📜 My Bids</a>
+            <a href="watchlist.html" class="active">⭐ Watchlist</a>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="container">
+        <div class="page-header">
+            <div>
+                <h1>⭐ My Watchlist</h1>
+                <p>Auctions you're following</p>
+            </div>
+            <button onclick="clearWatchlist()" style="background: #f3f4f6; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">🗑 Clear All</button>
+        </div>
+
+        <div id="watchlistGrid" class="watchlist-grid">
+            <!-- Watchlist items will be loaded here -->
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+        
+        // Demo watchlist data - replace with API call when ready
+        let watchlist = [
+            { 
+                id: 1, 
+                auction_id: 1,
+                title: 'Nguni Bull - 4 years', 
+                species: 'Cattle', 
+                breed: 'Nguni',
+                current_bid: 8500,
+                starting_price: 8000,
+                end_time: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+                added_date: '2026-05-02'
+            },
+            { 
+                id: 2, 
+                auction_id: 2,
+                title: 'Bonsmara Cow', 
+                species: 'Cattle', 
+                breed: 'Bonsmara',
+                current_bid: 7800,
+                starting_price: 7500,
+                end_time: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+                added_date: '2026-05-01'
+            },
+            { 
+                id: 3, 
+                auction_id: 3,
+                title: 'Boer Goat Buck', 
+                species: 'Goat', 
+                breed: 'Boer Goat',
+                current_bid: 3200,
+                starting_price: 3000,
+                end_time: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+                added_date: '2026-04-30'
+            }
+        ];
+        
+        function getToken() { return localStorage.getItem('agriguard_token'); }
+        
+        function getUser() {
+            const user = localStorage.getItem('agriguard_user');
+            return user ? JSON.parse(user) : null;
+        }
+        
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${isError ? 'error' : ''}`;
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 3000);
+        }
+        
+        function logout() {
+            localStorage.removeItem('agriguard_token');
+            localStorage.removeItem('agriguard_user');
+            localStorage.removeItem('agriguard_role');
+            window.location.href = '../login.html';
+        }
+        
+        function requireLogin() {
+            if (!getToken()) {
+                window.location.href = '../login.html';
+            }
+        }
+        
+        function formatTimeLeft(endTime) {
+            const diff = new Date(endTime) - new Date();
+            if (diff <= 0) return 'Ended';
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (86400000)) / 3600000);
+            if (days > 0) return `${days}d ${hours}h`;
+            if (hours > 0) return `${hours}h`;
+            return `${Math.floor(diff / 60000)}m`;
+        }
+        
+        function getSpeciesIcon(species) {
+            const icons = {
+                'Cattle': '🐄',
+                'Goat': '🐐',
+                'Sheep': '🐑',
+                'Pig': '🐷'
+            };
+            return icons[species] || '🐾';
+        }
+        
+        function renderWatchlist() {
+            const container = document.getElementById('watchlistGrid');
+            
+            if (watchlist.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⭐</div>
+                        <h3>Your watchlist is empty</h3>
+                        <p>Browse auctions and click the star icon to add items to your watchlist</p>
+                        <button onclick="location.href='auctions.html'" style="margin-top: 20px; padding: 10px 24px; background: #1D9E75; color: white; border: none; border-radius: 8px; cursor: pointer;">Browse Auctions</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = watchlist.map(item => `
+                <div class="watchlist-card">
+                    <div class="watchlist-image">
+                        ${getSpeciesIcon(item.species)}
+                        <button class="remove-btn" onclick="removeFromWatchlist(${item.id})" title="Remove from watchlist">✕</button>
+                    </div>
+                    <div class="watchlist-details">
+                        <div class="watchlist-title">${item.title}</div>
+                        <div class="watchlist-meta">${item.species} · ${item.breed}</div>
+                        <div class="bid-info">
+                            <div>
+                                <span class="current-bid">R${(item.current_bid || item.starting_price).toLocaleString()}</span>
+                            </div>
+                            <span class="time-left">⏱ ${formatTimeLeft(item.end_time)}</span>
+                        </div>
+                        <button class="bid-button" onclick="viewAuction(${item.auction_id})">View Auction</button>
+                        <div class="added-date">Added on ${item.added_date}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function removeFromWatchlist(itemId) {
+            watchlist = watchlist.filter(item => item.id !== itemId);
+            renderWatchlist();
+            showToast('Removed from watchlist');
+        }
+        
+        function clearWatchlist() {
+            if (watchlist.length === 0) {
+                showToast('Watchlist is already empty');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to clear your entire watchlist?')) {
+                watchlist = [];
+                renderWatchlist();
+                showToast('Watchlist cleared');
+            }
+        }
+        
+        function viewAuction(auctionId) {
+            window.location.href = `auctions.html?id=${auctionId}`;
+        }
+        
+        // Initialize
+        requireLogin();
+        renderWatchlist();
+    </script>
+</body>
+</html>

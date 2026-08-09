@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AgriGuard — Login</title>
+  <style>
+    :root {
+      --green: #1D9E75;
+      --green-dark: #0F6E56;
+      --green-light: #E1F5EE;
+      --blue-light: #E6F1FB;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-400: #9ca3af;
+      --gray-600: #6b7280;
+      --gray-700: #374151;
+      --gray-800: #374151;
+      --gray-900: #111827;
+      --white: #ffffff;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+      --red: #dc2626;
+      --red-light: #fee2e2;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #f4f5f7 0%, #e8ecef 100%);
+    }
+    
+    .login-container {
+      width: 100%;
+      max-width: 480px;
+      padding: 20px;
+    }
+    
+    .login-card {
+      background: #fff;
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      box-shadow: var(--shadow-md);
+    }
+    
+    .logo-section {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    
+    .logo-icon {
+      width: 56px;
+      height: 56px;
+      background: var(--green);
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+    
+    .logo-icon svg {
+      width: 28px;
+      height: 28px;
+    }
+    
+    .brand-name {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--gray-900);
+    }
+    
+    .brand-tagline {
+      font-size: 13px;
+      color: var(--gray-600);
+      margin-top: 4px;
+    }
+    
+    .input-group {
+      margin-bottom: 20px;
+    }
+    
+    .input-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--gray-700);
+    }
+    
+    .input-field {
+      width: 100%;
+      height: 44px;
+      padding: 0 14px;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    .input-field:focus {
+      outline: none;
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.1);
+    }
+    
+    .login-btn {
+      width: 100%;
+      height: 44px;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .login-btn:hover:not(:disabled) {
+      background: var(--green-dark);
+    }
+    
+    .login-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    
+    .secondary-btn {
+      width: 100%;
+      height: 44px;
+      background: transparent;
+      color: var(--green);
+      border: 1px solid var(--green);
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 12px;
+    }
+    
+    .secondary-btn:hover {
+      background: var(--green-light);
+    }
+    
+    .auth-links {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 16px;
+      margin-bottom: 20px;
+      font-size: 13px;
+    }
+    
+    .auth-links a {
+      color: var(--green);
+      text-decoration: none;
+      cursor: pointer;
+    }
+    
+    .auth-links a:hover {
+      text-decoration: underline;
+    }
+    
+    .demo-section {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--gray-200);
+    }
+    
+    .demo-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      margin-bottom: 12px;
+    }
+    
+    .demo-account {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      background: var(--gray-50);
+      border-radius: var(--radius-md);
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .demo-account:hover {
+      background: var(--gray-100);
+    }
+    
+    .demo-email {
+      font-size: 12px;
+      font-family: monospace;
+      color: var(--gray-700);
+    }
+    
+    .demo-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    
+    .badge-farmer {
+      background: var(--green-light);
+      color: var(--green-dark);
+    }
+    
+    .badge-buyer {
+      background: var(--blue-light);
+      color: #1e40af;
+    }
+    
+    .api-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding: 8px 12px;
+      background: var(--gray-50);
+      border-radius: var(--radius-md);
+      font-size: 12px;
+    }
+    
+    .api-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--gray-400);
+    }
+    
+    .api-dot.online {
+      background: var(--green);
+    }
+    
+    .api-dot.offline {
+      background: var(--red);
+    }
+    
+    .alert {
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+    
+    .alert-danger {
+      background: #FCEBEB;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+    
+    .alert-success {
+      background: var(--green-light);
+      color: #085041;
+      border: 1px solid var(--green-mid);
+    }
+    
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    
+    .modal-overlay.show {
+      display: flex;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--gray-400);
+    }
+    
+    .form-row {
+      margin-bottom: 16px;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    
+    .checkbox-group input {
+      width: 16px;
+      height: 16px;
+    }
+    
+    /* Password strength indicator */
+    .password-strength {
+      font-size: 11px;
+      margin-top: 5px;
+      transition: all 0.2s;
+    }
+    
+    .strength-weak { color: #ef4444; }
+    .strength-medium { color: #f59e0b; }
+    .strength-strong { color: #10b981; }
+    
+    /* Validation styles */
+    .input-field.error {
+      border-color: #ef4444;
+      background: #fee2e2;
+    }
+    
+    .input-field.valid {
+      border-color: #10b981;
+      background: #f0fdf4;
+    }
+  </style>
+</head>
+<body>
+<div class="login-container">
+  <div class="login-card">
+    <div class="logo-section">
+      <div class="logo-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <div class="brand-name">AgriGuard</div>
+      <div class="brand-tagline">Integrated Livestock Management</div>
+    </div>
+
+    <!-- API connection status -->
+    <div class="api-status">
+      <div class="api-dot" id="apiDot"></div>
+      <span id="apiStatusText">Checking API connection...</span>
+    </div>
+
+    <div id="errorMessage" class="alert alert-danger" style="display: none;"></div>
+    <div id="successMessage" class="alert alert-success" style="display: none;"></div>
+
+    <div class="input-group">
+      <label class="input-label">Email address</label>
+      <input type="email" id="emailInput" class="input-field" placeholder="farmer@agriguard.co.za">
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">Password</label>
+      <input type="password" id="passwordInput" class="input-field" placeholder="Enter your password">
+    </div>
+
+    <div class="checkbox-group">
+      <input type="checkbox" id="rememberCheckbox">
+      <label style="font-size: 13px; color: var(--gray-600);">Remember me</label>
+    </div>
+
+    <div class="auth-links">
+      <a onclick="openForgotPasswordModal()">Forgot password?</a>
+      <a onclick="openRegisterModal()">Create new account</a>
+    </div>
+
+    <button class="login-btn" id="loginButton">Sign in</button>
+
+    <div class="demo-section">
+      <div class="demo-title">Demo Accounts (Quick Login)</div>
+      <div class="demo-account" data-email="farmer@agriguard.co.za" data-password="password123">
+        <span class="demo-email">farmer@agriguard.co.za</span>
+        <span class="demo-badge badge-farmer">Farmer</span>
+      </div>
+      <div class="demo-account" data-email="buyer@agriguard.co.za" data-password="password123">
+        <span class="demo-email">buyer@agriguard.co.za</span>
+        <span class="demo-badge badge-buyer">Buyer</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div id="forgotModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">Reset Password</div>
+      <button class="close-modal" onclick="closeForgotModal()">&times;</button>
+    </div>
+    <div id="forgotMsg" class="alert" style="display: none;"></div>
+    <div class="form-row">
+      <label class="input-label">Email address</label>
+      <input type="email" id="resetEmail" class="input-field" placeholder="Enter your registered email">
+    </div>
+    <button class="login-btn" id="sendResetBtn" onclick="sendResetLink()">Send Reset Link</button>
+    <div style="margin-top: 12px; text-align: center;">
+      <a onclick="closeForgotModal()" style="color: var(--green); cursor: pointer;">Back to login</a>
+    </div>
+  </div>
+</div>
+
+<!-- Register Modal -->
+<div id="registerModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">Create New Account</div>
+      <button class="close-modal" onclick="closeRegisterModal()">&times;</button>
+    </div>
+    <div id="registerMsg" class="alert" style="display: none;"></div>
+    
+    <div class="form-row">
+      <label class="input-label">First Name *</label>
+      <input type="text" id="regFirstName" class="input-field" placeholder="Enter your first name">
+    </div>
+    
+    <div class="form-row">
+      <label class="input-label">Last Name *</label>
+      <input type="text" id="regLastName" class="input-field" placeholder="Enter your last name">
+    </div>
+    
+    <div class="form-row">
+      <label class="input-label">Email *</label>
+      <input type="email" id="regEmail" class="input-field" placeholder="Enter your email">
+    </div>
+    
+    <div class="form-row">
+      <label class="input-label">Phone Number</label>
+      <input type="tel" id="regPhone" class="input-field" placeholder="e.g., +27712345678">
+      <div class="password-strength" id="phoneError" style="display: none;"></div>
+    </div>
+    
+    <div class="form-row">
+      <label class="input-label">Farm Name</label>
+      <input type="text" id="regFarmName" class="input-field" placeholder="Your farm/organization name">
+    </div>
+    
+    <div class="form-row">
+      <label class="input-label">Location/Province</label>
+      <select id="regLocation" class="input-field">
+        <option value="">Select province</option>
+        <option>Eastern Cape</option><option>Free State</option><option>Gauteng</option>
+        <option>KwaZulu-Natal</option><option>Limpopo</option><option>Mpumalanga</option>
+        <option>Northern Cape</option><option>North West</option><option>Western Cape</option>
+      </select>
+    </div>
+    
+    <div class="form-row">
+      <label class="input-label">Password *</label>
+      <input type="password" id="regPassword" class="input-field" placeholder="Create a password (min 8 characters)">
+      <div id="passwordStrength" class="password-strength"></div>
+    </div>
+    
+    <div class="form-row">
+      <label class="input-label">Confirm Password *</label>
+      <input type="password" id="regConfirmPassword" class="input-field" placeholder="Confirm your password">
+      <div id="confirmError" class="password-strength" style="display: none;"></div>
+    </div>
+    
+    <div class="form-row">
+      <label class="input-label">Account Type *</label>
+      <select id="regRole" class="input-field">
+        <option value="farmer">Farmer / Livestock Owner</option>
+        <option value="buyer">Buyer / Auction Participant</option>
+      </select>
+    </div>
+    
+    <button class="login-btn" id="registerBtn" onclick="registerUser()">Create Account</button>
+    <div style="margin-top: 12px; text-align: center;">
+      Already have an account? <a onclick="closeRegisterModal()" style="color: var(--green); cursor: pointer;">Sign in</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  // API Configuration
+  const API_BASE_URL = 'http://localhost:5000';
+  
+  // Helper Functions
+  function showError(message) {
+    const errorDiv = document.getElementById('errorMessage');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    setTimeout(() => errorDiv.style.display = 'none', 5000);
+  }
+  
+  function showSuccess(message) {
+    const successDiv = document.getElementById('successMessage');
+    successDiv.textContent = message;
+    successDiv.style.display = 'block';
+    setTimeout(() => successDiv.style.display = 'none', 5000);
+  }
+  
+  function setLoading(button, isLoading, originalText) {
+    if (!button) return;
+    button.disabled = isLoading;
+    button.textContent = isLoading ? 'Loading...' : originalText;
+  }
+  
+  function showModalMessage(msgDiv, message, isError) {
+    msgDiv.textContent = message;
+    msgDiv.className = `alert ${isError ? 'alert-danger' : 'alert-success'}`;
+    msgDiv.style.display = 'block';
+    setTimeout(() => msgDiv.style.display = 'none', 5000);
+  }
+  
+  // Check API Status
+  async function checkAPIStatus() {
+    const dot = document.getElementById('apiDot');
+    const text = document.getElementById('apiStatusText');
+    try {
+      const response = await fetch(`${API_BASE_URL}/`, { method: 'GET' });
+      if (response.ok) {
+        dot.className = 'api-dot online';
+        text.textContent = 'API connected — AgriGuard backend is running';
+      } else {
+        throw new Error('API not responding');
+      }
+    } catch (error) {
+      dot.className = 'api-dot offline';
+      text.textContent = 'API offline — Start Flask: python app.py';
+      console.error('API Status Check Failed:', error);
+    }
+  }
+  
+  // Password strength checker
+  function checkPasswordStrength(password) {
+    let strength = 0;
+    let message = '';
+    let className = '';
+    
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[@$!%*?&]/.test(password)) strength++;
+    
+    if (password.length === 0) {
+      message = '';
+      className = '';
+    } else if (strength <= 2) {
+      message = '⚠️ Weak password - need uppercase, lowercase, number, special character';
+      className = 'strength-weak';
+    } else if (strength <= 4) {
+      message = '⚠️ Medium password - add special character for strength';
+      className = 'strength-medium';
+    } else {
+      message = '✅ Strong password';
+      className = 'strength-strong';
+    }
+    
+    return { message, className, strength };
+  }
+  
+  // Real-time password strength
+  document.getElementById('regPassword')?.addEventListener('input', function() {
+    const result = checkPasswordStrength(this.value);
+    const strengthDiv = document.getElementById('passwordStrength');
+    strengthDiv.textContent = result.message;
+    strengthDiv.className = `password-strength ${result.className}`;
+    
+    // Also check confirm password match
+    const confirmValue = document.getElementById('regConfirmPassword').value;
+    const confirmError = document.getElementById('confirmError');
+    if (confirmValue && this.value !== confirmValue) {
+      confirmError.textContent = '❌ Passwords do not match';
+      confirmError.style.display = 'block';
+      confirmError.className = 'password-strength strength-weak';
+    } else if (confirmValue && this.value === confirmValue) {
+      confirmError.textContent = '✅ Passwords match';
+      confirmError.style.display = 'block';
+      confirmError.className = 'password-strength strength-strong';
+    } else {
+      confirmError.style.display = 'none';
+    }
+  });
+  
+  // Confirm password match checker
+  document.getElementById('regConfirmPassword')?.addEventListener('input', function() {
+    const password = document.getElementById('regPassword').value;
+    const confirmError = document.getElementById('confirmError');
+    if (password !== this.value) {
+      confirmError.textContent = '❌ Passwords do not match';
+      confirmError.style.display = 'block';
+      confirmError.className = 'password-strength strength-weak';
+    } else {
+      confirmError.textContent = '✅ Passwords match';
+      confirmError.style.display = 'block';
+      confirmError.className = 'password-strength strength-strong';
+    }
+  });
+  
+  // Phone validation
+  document.getElementById('regPhone')?.addEventListener('input', function() {
+    const phone = this.value.trim();
+    const phoneError = document.getElementById('phoneError');
+    if (phone) {
+      const phoneRegex = /^(\+27|0)[1-9][0-9]{8}$/;
+      if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
+        phoneError.textContent = '❌ Invalid SA phone number (e.g., +27712345678)';
+        phoneError.style.display = 'block';
+        phoneError.className = 'password-strength strength-weak';
+        this.classList.add('error');
+      } else {
+        phoneError.textContent = '✅ Valid phone number';
+        phoneError.style.display = 'block';
+        phoneError.className = 'password-strength strength-strong';
+        this.classList.remove('error');
+        this.classList.add('valid');
+      }
+    } else {
+      phoneError.style.display = 'none';
+      this.classList.remove('error', 'valid');
+    }
+  });
+  
+  // Name validation
+  function validateName(input, fieldName) {
+    const nameRegex = /^[A-Za-z\s\-']{2,50}$/;
+    if (!input.value.trim() || !nameRegex.test(input.value.trim())) {
+      input.classList.add('error');
+      return false;
+    } else {
+      input.classList.remove('error');
+      input.classList.add('valid');
+      return true;
+    }
+  }
+  
+  document.getElementById('regFirstName')?.addEventListener('input', function() { validateName(this, 'First name'); });
+  document.getElementById('regLastName')?.addEventListener('input', function() { validateName(this, 'Last name'); });
+  
+// Email validation - all domains allowed
+document.getElementById('regEmail')?.addEventListener('input', function() {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!this.value.trim() || !emailRegex.test(this.value.trim())) {
+        this.classList.add('error');
+    } else {
+        this.classList.remove('error');
+        this.classList.add('valid');
+    }
+});
+  
+ // LOGIN FUNCTION
+  async function handleLogin(email, password, remember) {
+    if (!email || !password) {
+      showError('Please enter both email and password');
+      return false;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      showError('Please enter a valid email address');
+      return false;
+    }
+    
+    const loginBtn = document.getElementById('loginButton');
+    setLoading(loginBtn, true, 'Sign in');
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.toLowerCase(), password: password })
+      });
+      
+      const result = await response.json();
+      setLoading(loginBtn, false, 'Sign in');
+      
+      if (result.status === 'success' || result.success === true) {
+        const user = result.user;
+        const token = result.token || result.access_token;
+        
+        localStorage.setItem('agriguard_user', JSON.stringify(user));
+        localStorage.setItem('agriguard_token', token);
+        localStorage.setItem('agriguard_role', user.role);
+        
+        if (remember) {
+          localStorage.setItem('agriguard_saved_email', email);
+        } else {
+          localStorage.removeItem('agriguard_saved_email');
+        }
+        
+        showSuccess(`Welcome back, ${user.first_name || user.full_name || user.email}! Redirecting...`);
+        
+        setTimeout(() => {
+          if (user.role === 'farmer') {
+            window.location.href = 'farmer/dashboard.html';
+          } else if (user.role === 'buyer') {
+            window.location.href = 'buyer/auctions.html';
+          } else if (user.role === 'admin') {
+            window.location.href = 'admin/users.html';
+          } else {
+            window.location.href = 'dashboard.html';
+          }
+        }, 1000);
+        
+        return true;
+      } else {
+        showError(result.message || 'Invalid email or password');
+        return false;
+      }
+    } catch (error) {
+      setLoading(loginBtn, false, 'Sign in');
+      console.error('Login error:', error);
+      showError('Cannot reach the server. Make sure Flask is running on port 5000');
+      return false;
+    }
+  }
+
+  // REGISTER FUNCTION with full validation (any email domain allowed)
+async function registerUser() {
+    const firstName = document.getElementById('regFirstName')?.value.trim();
+    const lastName = document.getElementById('regLastName')?.value.trim();
+    const email = document.getElementById('regEmail')?.value.trim().toLowerCase();
+    const phone = document.getElementById('regPhone')?.value.trim();
+    const farmName = document.getElementById('regFarmName')?.value.trim();
+    const location = document.getElementById('regLocation')?.value;
+    const password = document.getElementById('regPassword')?.value;
+    const confirmPassword = document.getElementById('regConfirmPassword')?.value;
+    const role = document.getElementById('regRole')?.value;
+    
+    const msgDiv = document.getElementById('registerMsg');
+    const registerBtn = document.getElementById('registerBtn');
+    
+    msgDiv.style.display = 'none';
+    msgDiv.innerHTML = '';
+
+    // Validation Rules
+    const nameRegex = /^[A-Za-z\s\-']{2,50}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;  // any domain
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    
+    // 1. Required fields
+    if (!firstName || !lastName || !email || !password || !confirmPassword || !role) {
+      showModalMessage(msgDiv, 'Please fill in all required fields (*).', true);
+      return;
+    }
+    
+    // 2. Name validation
+    if (!nameRegex.test(firstName)) {
+      showModalMessage(msgDiv, 'First name must contain only letters (2-50 characters). No numbers or special characters.', true);
+      return;
+    }
+    if (!nameRegex.test(lastName)) {
+      showModalMessage(msgDiv, 'Last name must contain only letters (2-50 characters). No numbers or special characters.', true);
+      return;
+    }
+    
+    // 3. Email validation - any domain allowed
+    if (!emailRegex.test(email)) {
+      showModalMessage(msgDiv, 'Please enter a valid email address.', true);
+      return;
+    }
+    
+    // 4. Phone validation (optional)
+    if (phone) {
+      const phoneRegex = /^(\+27|0)[1-9][0-9]{8}$/;
+      if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
+        showModalMessage(msgDiv, 'Please enter a valid South African phone number (e.g., +27712345678 or 0712345678).', true);
+        return;
+      }
+    }
+    
+    // 5. Password validation
+    if (!passwordRegex.test(password)) {
+      showModalMessage(msgDiv, 'Password must be at least 8 characters and include: 1 uppercase, 1 lowercase, 1 number, and 1 special character (@$!%*?&).', true);
+      return;
+    }
+    
+    // 6. Confirm password match
+    if (password !== confirmPassword) {
+      showModalMessage(msgDiv, 'Passwords do not match.', true);
+      return;
+    }
+    
+    // 7. Farm name validation (if provided)
+    if (farmName && (farmName.length < 2 || farmName.length > 100)) {
+      showModalMessage(msgDiv, 'Farm name must be between 2 and 100 characters.', true);
+      return;
+    }
+    
+    setLoading(registerBtn, true, 'Create Account');
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+          first_name: firstName,
+          last_name: lastName,
+          role: role,
+          farm_name: farmName,
+          location: location,
+          phone: phone
+        })
+      });
+      
+      const result = await response.json();
+      setLoading(registerBtn, false, 'Create Account');
+      
+      if (result.status === 'success' || result.success === true) {
+        showModalMessage(msgDiv, '✅ Account created successfully! You can now sign in.', false);
+        
+        document.getElementById('emailInput').value = email;
+        document.getElementById('passwordInput').value = password;
+        
+        setTimeout(() => {
+          closeRegisterModal();
+          showSuccess('Registration successful! Please sign in.');
+        }, 2000);
+      } else {
+        showModalMessage(msgDiv, result.message || 'Registration failed. Please try again.', true);
+      }
+    } catch (error) {
+      setLoading(registerBtn, false, 'Create Account');
+      console.error('Register error:', error);
+      showModalMessage(msgDiv, 'Unable to connect to server. Make sure Flask is running.', true);
+    }
+}
+
+  
+
+ // FORGOT PASSWORD FUNCTION
+  async function sendResetLink() {
+    const email = document.getElementById('resetEmail')?.value.trim();
+    const msgDiv = document.getElementById('forgotMsg');
+    const sendBtn = document.getElementById('sendResetBtn');
+    
+    if (!email) {
+      showModalMessage(msgDiv, 'Please enter your email address.', true);
+      return;
+    }
+    
+    setLoading(sendBtn, true, 'Sending...');
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.toLowerCase() })
+      });
+      
+      const result = await response.json();
+      setLoading(sendBtn, false, 'Send Reset Link');
+      
+      if (result.reset_link) {
+        msgDiv.innerHTML = `${result.message || 'Reset link generated'}<br><br><a href="${result.reset_link}" target="_blank" style="color: var(--green); word-break: break-all;">${result.reset_link}</a>`;
+        msgDiv.className = 'alert alert-success';
+        msgDiv.style.display = 'block';
+      } else {
+        showModalMessage(msgDiv, result.message || `Password reset link sent to ${email}!`, false);
+        setTimeout(() => closeForgotModal(), 3000);
+      }
+    } catch (error) {
+      setLoading(sendBtn, false, 'Send Reset Link');
+      showModalMessage(msgDiv, 'Unable to send reset link. Please try again later.', true);
+    }
+  }
+  
+  // Modal Functions
+  function openForgotPasswordModal() {
+    document.getElementById('forgotModal').classList.add('show');
+    document.getElementById('resetEmail').value = '';
+    const forgotMsg = document.getElementById('forgotMsg');
+    forgotMsg.style.display = 'none';
+  }
+  
+  function closeForgotModal() {
+    document.getElementById('forgotModal').classList.remove('show');
+  }
+  
+  function openRegisterModal() {
+    document.getElementById('registerModal').classList.add('show');
+    const registerMsg = document.getElementById('registerMsg');
+    registerMsg.style.display = 'none';
+    // Clear form and validation styles
+    ['regFirstName', 'regLastName', 'regEmail', 'regPhone', 'regFarmName', 
+     'regLocation', 'regPassword', 'regConfirmPassword'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.value = '';
+        el.classList.remove('error', 'valid');
+      }
+    });
+    document.getElementById('passwordStrength').textContent = '';
+    document.getElementById('confirmError').style.display = 'none';
+    document.getElementById('phoneError').style.display = 'none';
+    const regRole = document.getElementById('regRole');
+    if (regRole) regRole.value = 'farmer';
+  }
+  
+  function closeRegisterModal() {
+    document.getElementById('registerModal').classList.remove('show');
+  }
+  
+  // Load saved email
+  const savedEmail = localStorage.getItem('agriguard_saved_email');
+  if (savedEmail) {
+    document.getElementById('emailInput').value = savedEmail;
+    document.getElementById('rememberCheckbox').checked = true;
+  }
+  
+  // Event Listeners
+  document.getElementById('loginButton').addEventListener('click', () => {
+    const email = document.getElementById('emailInput').value.trim();
+    const password = document.getElementById('passwordInput').value;
+    const remember = document.getElementById('rememberCheckbox').checked;
+    handleLogin(email, password, remember);
+  });
+  
+  // Enter key support
+  document.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      const email = document.getElementById('emailInput').value.trim();
+      const password = document.getElementById('passwordInput').value;
+      if (email && password) {
+        handleLogin(email, password, document.getElementById('rememberCheckbox').checked);
+      }
+    }
+  });
+  
+  // Demo account buttons
+  document.querySelectorAll('.demo-account').forEach(el => {
+    el.addEventListener('click', () => {
+      const email = el.dataset.email;
+      const password = el.dataset.password;
+      document.getElementById('emailInput').value = email;
+      document.getElementById('passwordInput').value = password;
+      handleLogin(email, password, true);
+    });
+  });
+  
+  // Check API on load
+  checkAPIStatus();
+  
+  // Expose global functions for modals
+  window.openForgotPasswordModal = openForgotPasswordModal;
+  window.closeForgotModal = closeForgotModal;
+  window.openRegisterModal = openRegisterModal;
+  window.closeRegisterModal = closeRegisterModal;
+  window.registerUser = registerUser;
+  window.sendResetLink = sendResetLink;
+</script>
+</body>
+</html>
