@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/agriguard-theme.css"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AgriGuard - My Animals</title>
     <style>
@@ -12,8 +16,8 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
+            font-family: "Source Sans 3", system-ui, sans-serif;
+            background: #F7F4EE;
         }
         
         /* Navbar */
@@ -23,7 +27,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(15,110,86,.06);
             flex-wrap: wrap;
             gap: 15px;
         }
@@ -32,6 +36,7 @@
             font-size: 22px;
             font-weight: bold;
             color: #1D9E75;
+            font-family: "Fraunces", Georgia, serif;
         }
         
         .nav-links {
@@ -41,10 +46,10 @@
         }
         
         .nav-links a {
+            border-radius: 999px;
             text-decoration: none;
             color: #374151;
             padding: 8px 14px;
-            border-radius: 8px;
             font-size: 14px;
             transition: all 0.2s;
         }
@@ -54,24 +59,25 @@
         }
         
         .nav-links a.active {
-            background: #1D9E75;
-            color: white;
-            border: 2px solid #0f6e56;
+            background: #E1F5EE;
+            color: #1D9E75;
+            border: none;
+            border-radius: 999px;
         }
         
         .logout-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
+            background: transparent;
+            color: #B42318;
+            border: 1px solid #E8C4C0;
             padding: 8px 18px;
-            border-radius: 8px;
+            border-radius: 999px;
             cursor: pointer;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 700;
         }
         
         .logout-btn:hover {
-            background: #dc2626;
+            background: #FCE8E6;
         }
         
         /* Container */
@@ -116,8 +122,9 @@
         .stat-box {
             background: white;
             padding: 15px 25px;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 14px;
+            border: 1px solid #E5E1D8;
+            box-shadow: 0 10px 30px rgba(15,110,86,.06);
             text-align: center;
             flex: 1;
             min-width: 120px;
@@ -134,6 +141,89 @@
             color: #6b7280;
             margin-top: 5px;
         }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 16px;
+            background: #fff;
+            border: 1px solid #E5E1D8;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 10px 30px rgba(15,110,86,.06);
+        }
+
+        .search-wrap {
+            position: relative;
+            flex: 1 1 240px;
+            min-width: 200px;
+        }
+
+        .search-wrap .ag-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+            pointer-events: none;
+        }
+
+        .search-wrap input {
+            width: 100%;
+            padding: 10px 12px 10px 38px;
+            border: 1px solid #E5E1D8;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            background: #FBF9F4;
+            color: #163528;
+        }
+
+        .search-wrap input:focus,
+        .toolbar select:focus {
+            outline: none;
+            border-color: #1D9E75;
+            box-shadow: 0 0 0 3px rgba(29,158,117,.15);
+            background: #fff;
+        }
+
+        .toolbar select {
+            padding: 10px 12px;
+            border: 1px solid #E5E1D8;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            background: #FBF9F4;
+            color: #163528;
+            min-width: 140px;
+        }
+
+        .toolbar .filter-meta {
+            margin-left: auto;
+            font-size: 13px;
+            color: #6b7280;
+            white-space: nowrap;
+        }
+
+        .btn-clear {
+            background: transparent;
+            color: #374151;
+            border: 1px solid #E5E1D8;
+            padding: 10px 14px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
+        }
+
+        .btn-clear:hover {
+            background: #E1F5EE;
+            border-color: #1D9E75;
+            color: #1D9E75;
+        }
         
         /* Buttons */
         .btn-primary {
@@ -149,7 +239,7 @@
         }
         
         .btn-primary:hover {
-            background: #0f6e56;
+            background: #0F6E56;
             transform: translateY(-1px);
         }
         
@@ -168,6 +258,25 @@
             background: #dc2626;
         }
         
+        .btn-edit {
+            background: #E1F5EE;
+            color: #0F6E56;
+            border: 1px solid #A7D7C5;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+            margin-right: 6px;
+        }
+
+        .btn-edit:hover {
+            background: #1D9E75;
+            color: #fff;
+            border-color: #1D9E75;
+        }
+
         .btn-view {
             background: #f3f4f6;
             color: #374151;
@@ -389,27 +498,29 @@
 </head>
 <body>
     <div class="navbar">
-        <div class="logo">🌾 AgriGuard</div>
-        <div class="nav-links">
-            <a href="dashboard.html">📊 Dashboard</a>
-            <a href="animals.html" class="active">🐄 My Animals</a>
-            <a href="add-animal.html">➕ Add Animal</a>
-            <a href="vaccinations.html">💉 Vaccinations</a>
-            <a href="health.html">🏥 Health</a>
-            <a href="tracking.html">📍 Tracking</a>
-            <a href="auctions.html">💰 Auctions</a>
-            <a href="chat-bot.html">🤖 AI Chat</a>
-        </div>
-        <button class="logout-btn" onclick="logout()">Logout</button>
-    </div>
-
-    <div class="container">
+  <div class="logo"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> AgriGuard</div>
+  <div class="nav-links">
+    <a href="dashboard.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Dashboard</a>
+    <a href="animals.html" class="active"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 18c-3 0-5-2-5-5 0-2 1-3 2-4-.5-2 1-4 3-4s3.5 2 3 4c1 1 2 2 2 4 0 3-2 5-5 5z"/><path d="M8 10c-1.5-.5-3 0-3.5 1.5M16 10c1.5-.5 3 0 3.5 1.5M10 19v2M14 19v2"/></svg> My Animals</a>
+    <a href="breed-id.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v6a3 3 0 003 3h4a3 3 0 003-3V4M7 20v-6a3 3 0 013-3h4a3 3 0 013 3v6M9 4h.01M15 4h.01M9 20h.01M15 20h.01"/></svg> Breed ID</a>
+    <a href="add-animal.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add Animals</a>
+    <a href="tracking.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg> Tracking</a>
+    <a href="health.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2 4 4 0 017 2c0 5.5-7 10-7 10z"/></svg> Health</a>
+    <a href="vaccinations.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3l7 7M11 6l7 7M4 14l6 6M3 21l4-1 9-9-3-3-9 9-1 4z"/></svg> Vaccination</a>
+    <a href="auctions.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14l-4 4M14 4l6 6M4.5 16.5L9 12l7-7 3 3-7 7-4.5 4.5zM13 19h8"/></svg> Auction</a>
+    <a href="chat-bot.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 01-8 8H7l-4 3v-5a8 8 0 118-6z"/></svg> AI Chat</a>
+  </div>
+  <div class="nav-actions">
+    <button type="button" class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</div>
+<div class="container">
         <div class="header">
             <div>
-                <h1>🐄 My Livestock</h1>
+                <h1><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 18c-3 0-5-2-5-5 0-2 1-3 2-4-.5-2 1-4 3-4s3.5 2 3 4c1 1 2 2 2 4 0 3-2 5-5 5z"/><path d="M8 10c-1.5-.5-3 0-3.5 1.5M16 10c1.5-.5 3 0 3.5 1.5M10 19v2M14 19v2"/></svg> My Livestock</h1>
                 <p>Manage and track all your animals</p>
             </div>
-            <button class="btn-primary" onclick="openAddModal()">➕ Add New Animal</button>
+            <button class="btn-primary" onclick="openAddModal()"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add New Animal</button>
         </div>
 
         <!-- Stats Row -->
@@ -420,16 +531,41 @@
             </div>
             <div class="stat-box">
                 <div class="stat-number" id="cattleCount">0</div>
-                <div class="stat-label">🐄 Cattle</div>
+                <div class="stat-label"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="11" r="5"/><path d="M5 8l2 2M19 8l-2 2M8 18v2M16 18v2M9 7C7 5 5 5 4 6M15 7c2-2 4-2 5-1"/></svg> Cattle</div>
             </div>
             <div class="stat-box">
                 <div class="stat-number" id="goatCount">0</div>
-                <div class="stat-label">🐐 Goats</div>
+                <div class="stat-label"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14c-2.5 0-4-1.5-4-3.5S10 7 12 7s4 1.5 4 3.5S14.5 14 12 14z"/><path d="M8 8L5 4M16 8l3-4M10 18v2M14 18v2"/></svg> Goats</div>
             </div>
             <div class="stat-box">
                 <div class="stat-number" id="sheepCount">0</div>
-                <div class="stat-label">🐑 Sheep</div>
+                <div class="stat-label"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><circle cx="7" cy="11" r="2"/><circle cx="17" cy="11" r="2"/><circle cx="9" cy="16" r="2"/><circle cx="15" cy="16" r="2"/><path d="M10 8V6M14 8V6"/></svg> Sheep</div>
             </div>
+        </div>
+
+        <div class="toolbar">
+            <div class="search-wrap">
+                <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
+                <input type="search" id="animalSearch" placeholder="Search tag, breed, species…" autocomplete="off" aria-label="Search animals">
+            </div>
+            <select id="speciesFilter" aria-label="Filter by species">
+                <option value="">All species</option>
+                <option value="Cattle">Cattle</option>
+                <option value="Goat">Goat</option>
+                <option value="Sheep">Sheep</option>
+            </select>
+            <select id="genderFilter" aria-label="Filter by gender">
+                <option value="">All genders</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+            </select>
+            <select id="statusFilter" aria-label="Filter by status">
+                <option value="">All statuses</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+            </select>
+            <button type="button" class="btn-clear" onclick="clearFilters()">Clear</button>
+            <div class="filter-meta" id="filterMeta">Showing 0</div>
         </div>
 
         <!-- Animals Table -->
@@ -464,7 +600,7 @@
     <div id="addModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>➕ Add New Animal</h2>
+                <h2><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add New Animal</h2>
                 <button class="close-modal" onclick="closeAddModal()">&times;</button>
             </div>
             <form id="addAnimalForm">
@@ -476,14 +612,16 @@
                     <label>Species <span class="required">*</span></label>
                     <select id="species" required>
                         <option value="">Select species</option>
-                        <option value="Cattle">🐄 Cattle</option>
-                        <option value="Goat">🐐 Goat</option>
-                        <option value="Sheep">🐑 Sheep</option>
+                        <option value="Cattle"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="11" r="5"/><path d="M5 8l2 2M19 8l-2 2M8 18v2M16 18v2M9 7C7 5 5 5 4 6M15 7c2-2 4-2 5-1"/></svg> Cattle</option>
+                        <option value="Goat"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14c-2.5 0-4-1.5-4-3.5S10 7 12 7s4 1.5 4 3.5S14.5 14 12 14z"/><path d="M8 8L5 4M16 8l3-4M10 18v2M14 18v2"/></svg> Goat</option>
+                        <option value="Sheep"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><circle cx="7" cy="11" r="2"/><circle cx="17" cy="11" r="2"/><circle cx="9" cy="16" r="2"/><circle cx="15" cy="16" r="2"/><path d="M10 8V6M14 8V6"/></svg> Sheep</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Breed</label>
-                    <input type="text" id="breed" placeholder="e.g., Angus, Nguni">
+                    <select id="breed" aria-label="Breed">
+                        <option value="">Select breed</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label>Gender</label>
@@ -495,13 +633,71 @@
                 </div>
                 <div class="form-group">
                     <label>Weight (kg)</label>
-                    <input type="number" id="weight" step="0.01" placeholder="e.g., 450">
+                    <input type="number" id="weight" step="0.01" min="0" placeholder="e.g., 450">
                 </div>
                 <div class="form-group">
                     <label>Date of Birth</label>
-                    <input type="date" id="dateOfBirth">
+                    <input type="date" id="dateOfBirth" max="">
+                    <div class="help-text" style="font-size:12px;color:#6b7280;margin-top:4px;">Cannot be a future date</div>
                 </div>
                 <button type="submit" class="btn-primary" style="width: 100%;">Add Animal</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Animal Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Edit Animal</h2>
+                <button class="close-modal" onclick="closeEditModal()">&times;</button>
+            </div>
+            <form id="editAnimalForm">
+                <input type="hidden" id="editAnimalId">
+                <div class="form-group">
+                    <label>Ear Tag ID <span class="required">*</span></label>
+                    <input type="text" id="editAnimalTag" required placeholder="e.g., AG-001">
+                </div>
+                <div class="form-group">
+                    <label>Species <span class="required">*</span></label>
+                    <select id="editSpecies" required>
+                        <option value="">Select species</option>
+                        <option value="Cattle">Cattle</option>
+                        <option value="Goat">Goat</option>
+                        <option value="Sheep">Sheep</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Breed</label>
+                    <select id="editBreed" aria-label="Breed">
+                        <option value="">Select breed</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Gender</label>
+                    <select id="editGender">
+                        <option value="">Select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Weight (kg)</label>
+                    <input type="number" id="editWeight" step="0.01" min="0" placeholder="e.g., 450">
+                </div>
+                <div class="form-group">
+                    <label>Date of Birth</label>
+                    <input type="date" id="editDateOfBirth" max="">
+                    <div class="help-text" style="font-size:12px;color:#6b7280;margin-top:4px;">Cannot be a future date</div>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="editStatus">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Save Changes</button>
             </form>
         </div>
     </div>
@@ -523,9 +719,7 @@
             toast.textContent = message;
             toast.className = `toast ${isError ? 'error' : ''}`;
             toast.style.display = 'block';
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, 3000);
+            setTimeout(() => { toast.style.display = 'none'; }, 8000);
         }
         
         function logout() {
@@ -545,7 +739,98 @@
                 setTimeout(() => window.location.href = 'dashboard.html', 2000);
             }
         }
+
+        function todayISODate() {
+            const d = new Date();
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function applyDateMaxToday() {
+            const today = todayISODate();
+            ['dateOfBirth', 'editDateOfBirth'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.max = today;
+            });
+        }
+
+        function isFutureDate(value) {
+            return Boolean(value) && value > todayISODate();
+        }
+
+        const BREED_SPECIES = {
+            'Afrikaner': 'Cattle',
+            'Angus': 'Cattle',
+            'Bonsmara': 'Cattle',
+            'Brahman': 'Cattle',
+            'Drakensberger': 'Cattle',
+            'Hereford': 'Cattle',
+            'Nguni': 'Cattle',
+            'Simmentaler': 'Cattle',
+            'Boer Goat': 'Goat',
+            'Kalahari Red': 'Goat',
+            'Savanna': 'Goat',
+            'Indigenous Veld Goat': 'Goat',
+            'Damara': 'Sheep',
+            'Dorper': 'Sheep',
+            'Merino': 'Sheep',
+            'Meatmaster': 'Sheep',
+            'Van Rooy': 'Sheep'
+        };
+
+        function normalizeBreed(name) {
+            return (name || '').trim().toLowerCase();
+        }
+
+        function speciesFromBreed(breed) {
+            const exact = Object.keys(BREED_SPECIES).find(k => normalizeBreed(k) === normalizeBreed(breed));
+            return exact ? BREED_SPECIES[exact] : '';
+        }
+
+        function ensureBreedOption(selectEl, breed) {
+            if (!selectEl || !breed) return;
+            const exists = [...selectEl.options].some(o => o.value === breed);
+            if (!exists) {
+                const opt = document.createElement('option');
+                opt.value = breed;
+                opt.textContent = breed;
+                selectEl.appendChild(opt);
+            }
+        }
+
+        function populateBreedSelect(selectEl, species, preferredBreed = '') {
+            if (!selectEl) return;
+            const current = preferredBreed || selectEl.value;
+            const groups = { Cattle: [], Goat: [], Sheep: [] };
+            Object.entries(BREED_SPECIES).forEach(([breed, sp]) => {
+                if (!groups[sp]) return;
+                if (species && sp !== species) return;
+                groups[sp].push(breed);
+            });
+
+            let html = '<option value="">Select breed</option>';
+            Object.entries(groups).forEach(([sp, breeds]) => {
+                if (!breeds.length) return;
+                breeds.sort((a, b) => a.localeCompare(b));
+                html += `<optgroup label="${sp}">`;
+                breeds.forEach(b => { html += `<option value="${b}">${b}</option>`; });
+                html += '</optgroup>';
+            });
+            selectEl.innerHTML = html;
+            if (current) {
+                ensureBreedOption(selectEl, current);
+                selectEl.value = current;
+                // If breed doesn't match selected species, clear it
+                if (species && speciesFromBreed(current) && speciesFromBreed(current) !== species) {
+                    selectEl.value = '';
+                }
+            }
+        }
         
+        let allAnimals = [];
+
         function updateStats(animals) {
             const total = animals.length;
             const cattle = animals.filter(a => a.species === 'Cattle').length;
@@ -562,12 +847,92 @@
             if (!birthDate) return '-';
             const today = new Date();
             const birth = new Date(birthDate);
-            let age = today.getFullYear() - birth.getFullYear();
-            const m = today.getMonth() - birth.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-                age--;
+            if (Number.isNaN(birth.getTime())) return '-';
+            let months = (today.getFullYear() - birth.getFullYear()) * 12
+                + (today.getMonth() - birth.getMonth());
+            if (today.getDate() < birth.getDate()) months--;
+            if (months < 0) months = 0;
+            if (months < 12) return months <= 0 ? '< 1 mo' : `${months} mo`;
+            const years = Math.floor(months / 12);
+            const rem = months % 12;
+            return rem ? `${years} yr ${rem} mo` : `${years} yr`;
+        }
+
+        function getFilteredAnimals() {
+            const q = (document.getElementById('animalSearch').value || '').trim().toLowerCase();
+            const species = document.getElementById('speciesFilter').value;
+            const gender = document.getElementById('genderFilter').value;
+            const status = document.getElementById('statusFilter').value;
+
+            return allAnimals.filter(a => {
+                if (species && a.species !== species) return false;
+                if (gender && (a.gender || '') !== gender) return false;
+                if (status && (a.status || 'Active') !== status) return false;
+                if (!q) return true;
+                const hay = [
+                    a.animal_tag, a.species, a.breed, a.gender, a.status, a.zone_name
+                ].map(v => String(v || '').toLowerCase()).join(' ');
+                return hay.includes(q);
+            });
+        }
+
+        function renderAnimals(animals) {
+            const tbody = document.getElementById('animalsTable');
+            const meta = document.getElementById('filterMeta');
+            const total = allAnimals.length;
+            const shown = animals.length;
+            meta.textContent = shown === total
+                ? `Showing ${shown}`
+                : `Showing ${shown} of ${total}`;
+
+            if (!total) {
+                tbody.innerHTML = `
+                    <tr><td colspan="8" style="text-align: center; padding: 40px;">
+                        <div class="empty-state">
+                             No animals yet.<br><br>
+                            <a href="add-animal.html">Click here to add your first animal</a>
+                        </div>
+                    </td></tr>
+                `;
+                return;
             }
-            return age > 0 ? `${age} yrs` : '< 1 yr';
+
+            if (!shown) {
+                tbody.innerHTML = `
+                    <tr><td colspan="8" style="text-align: center; padding: 40px;">
+                        <div class="empty-state">No animals match your search or filters.</div>
+                    </td></tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = animals.map(animal => `
+                <tr>
+                    <td><strong>${animal.animal_tag}</strong></td>
+                    <td>${animal.species}</td>
+                    <td>${animal.breed || '-'}</td>
+                    <td>${animal.gender || '-'}</td>
+                    <td>${animal.weight_kg ? animal.weight_kg + ' kg' : '-'}</td>
+                    <td>${animal.age || calculateAge(animal.date_of_birth || animal.birth_date)}</td>
+                    <td><span class="badge badge-active">${animal.status || 'Active'}</span></td>
+                    <td>
+                        <button class="btn-edit" onclick="openEditModal(${animal.animal_id})"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Edit</button>
+                        <button class="btn-danger" onclick="deleteAnimal(${animal.animal_id})"> <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg> Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function applyFilters() {
+            renderAnimals(getFilteredAnimals());
+        }
+
+        function clearFilters() {
+            document.getElementById('animalSearch').value = '';
+            document.getElementById('speciesFilter').value = '';
+            document.getElementById('genderFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            applyFilters();
         }
         
         async function loadAnimals() {
@@ -576,35 +941,9 @@
                     headers: { 'Authorization': `Bearer ${getToken()}` }
                 });
                 const result = await response.json();
-                
-                const tbody = document.getElementById('animalsTable');
-                if (result.data && result.data.length > 0) {
-                    updateStats(result.data);
-                    tbody.innerHTML = result.data.map(animal => `
-                        <tr>
-                            <td><strong>${animal.animal_tag}</strong></td>
-                            <td>${animal.species}</td>
-                            <td>${animal.breed || '-'}</td>
-                            <td>${animal.gender || '-'}</td>
-                            <td>${animal.weight_kg ? animal.weight_kg + ' kg' : '-'}</td>
-                            <td>${calculateAge(animal.date_of_birth)}</td>
-                            <td><span class="badge badge-active">${animal.status || 'Active'}</span></td>
-                            <td>
-                                <button class="btn-view" onclick="viewAnimal(${animal.animal_id})">👁 View</button>
-                                <button class="btn-danger" onclick="deleteAnimal(${animal.animal_id})">🗑 Delete</button>
-                            </td>
-                        </table>
-                    `).join('');
-                } else {
-                    tbody.innerHTML = `
-                        <tr><td colspan="8" style="text-align: center; padding: 40px;">
-                            <div class="empty-state">
-                                🐄 No animals yet.<br><br>
-                                <a href="add-animal.html">Click here to add your first animal</a>
-                            </div>
-                        </td></tr>
-                    `;
-                }
+                allAnimals = Array.isArray(result.data) ? result.data : [];
+                updateStats(allAnimals);
+                applyFilters();
             } catch (error) {
                 console.error('Load animals error:', error);
                 showToast('Error loading animals', true);
@@ -613,6 +952,17 @@
         
         async function addAnimal(event) {
             event.preventDefault();
+
+            const dob = document.getElementById('dateOfBirth').value || null;
+            if (isFutureDate(dob)) {
+                showToast('Date of birth cannot be in the future', true);
+                return;
+            }
+            const weightRaw = document.getElementById('weight').value;
+            if (weightRaw !== '' && Number(weightRaw) < 0) {
+                showToast('Weight cannot be negative', true);
+                return;
+            }
             
             const submitBtn = event.target.querySelector('button[type="submit"]');
             const originalText = submitBtn.textContent;
@@ -624,8 +974,8 @@
                 species: document.getElementById('species').value,
                 breed: document.getElementById('breed').value,
                 gender: document.getElementById('gender').value,
-                weight_kg: parseFloat(document.getElementById('weight').value) || null,
-                date_of_birth: document.getElementById('dateOfBirth').value || null
+                weight_kg: weightRaw === '' ? null : parseFloat(weightRaw),
+                date_of_birth: dob
             };
             
             try {
@@ -641,7 +991,7 @@
                 const result = await response.json();
                 
                 if (result.status === 'success' || result.success === true) {
-                    showToast('✅ Animal added successfully!');
+                    showToast('Animal added successfully!');
                     closeAddModal();
                     loadAnimals();
                     document.getElementById('addAnimalForm').reset();
@@ -657,9 +1007,95 @@
             }
         }
         
-        function viewAnimal(animalId) {
-            // Future: Open animal details page
-            showToast(`Viewing animal ${animalId} (coming soon)`);
+        function toDateInputValue(value) {
+            if (!value) return '';
+            const s = String(value);
+            return s.length >= 10 ? s.slice(0, 10) : s;
+        }
+
+        function openEditModal(animalId) {
+            const animal = allAnimals.find(a => Number(a.animal_id) === Number(animalId));
+            if (!animal) {
+                showToast('Animal not found', true);
+                return;
+            }
+            document.getElementById('editAnimalId').value = animal.animal_id;
+            document.getElementById('editAnimalTag').value = animal.animal_tag || '';
+            document.getElementById('editSpecies').value = animal.species || '';
+            populateBreedSelect(
+                document.getElementById('editBreed'),
+                animal.species || '',
+                animal.breed || ''
+            );
+            document.getElementById('editGender').value = animal.gender || '';
+            document.getElementById('editWeight').value = animal.weight_kg != null ? animal.weight_kg : '';
+            document.getElementById('editDateOfBirth').value = toDateInputValue(animal.date_of_birth || animal.birth_date);
+            document.getElementById('editStatus').value = animal.status || 'Active';
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('show');
+            document.getElementById('editAnimalForm').reset();
+            document.getElementById('editAnimalId').value = '';
+            populateBreedSelect(document.getElementById('editBreed'), '');
+        }
+
+        async function saveEditAnimal(event) {
+            event.preventDefault();
+            const animalId = document.getElementById('editAnimalId').value;
+            if (!animalId) return;
+
+            const dob = document.getElementById('editDateOfBirth').value || null;
+            if (isFutureDate(dob)) {
+                showToast('Date of birth cannot be in the future', true);
+                return;
+            }
+            const editWeightRaw = document.getElementById('editWeight').value;
+            if (editWeightRaw !== '' && Number(editWeightRaw) < 0) {
+                showToast('Weight cannot be negative', true);
+                return;
+            }
+
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+
+            const payload = {
+                animal_tag: document.getElementById('editAnimalTag').value.trim(),
+                species: document.getElementById('editSpecies').value,
+                breed: document.getElementById('editBreed').value.trim(),
+                gender: document.getElementById('editGender').value,
+                weight_kg: editWeightRaw === '' ? null : parseFloat(editWeightRaw),
+                date_of_birth: dob,
+                status: document.getElementById('editStatus').value || 'Active'
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/animals/${animalId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getToken()}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.status === 'success' || result.success === true) {
+                    showToast('Animal updated successfully');
+                    closeEditModal();
+                    loadAnimals();
+                } else {
+                    showToast(result.message || 'Error updating animal', true);
+                }
+            } catch (error) {
+                console.error('Update animal error:', error);
+                showToast('Network error. Make sure Flask is running.', true);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
         }
         
         async function deleteAnimal(animalId) {
@@ -686,26 +1122,62 @@
         }
         
         function openAddModal() {
+            populateBreedSelect(
+                document.getElementById('breed'),
+                document.getElementById('species').value || ''
+            );
             document.getElementById('addModal').classList.add('show');
         }
         
         function closeAddModal() {
             document.getElementById('addModal').classList.remove('show');
             document.getElementById('addAnimalForm').reset();
+            populateBreedSelect(document.getElementById('breed'), '');
         }
         
         // Initialize
         requireLogin();
+        applyDateMaxToday();
+        populateBreedSelect(document.getElementById('breed'), '');
+        populateBreedSelect(document.getElementById('editBreed'), '');
         loadAnimals();
+
+        document.getElementById('species').addEventListener('change', function () {
+            const breed = document.getElementById('breed').value;
+            populateBreedSelect(this.form.querySelector('#breed'), this.value, breed);
+            const matched = speciesFromBreed(document.getElementById('breed').value);
+            if (matched && matched !== this.value) document.getElementById('breed').value = '';
+        });
+        document.getElementById('breed').addEventListener('change', function () {
+            const sp = speciesFromBreed(this.value);
+            if (sp) {
+                document.getElementById('species').value = sp;
+                populateBreedSelect(this, sp, this.value);
+            }
+        });
+        document.getElementById('editSpecies').addEventListener('change', function () {
+            const breed = document.getElementById('editBreed').value;
+            populateBreedSelect(document.getElementById('editBreed'), this.value, breed);
+        });
+        document.getElementById('editBreed').addEventListener('change', function () {
+            const sp = speciesFromBreed(this.value);
+            if (sp) {
+                document.getElementById('editSpecies').value = sp;
+                populateBreedSelect(this, sp, this.value);
+            }
+        });
         
         document.getElementById('addAnimalForm').addEventListener('submit', addAnimal);
+        document.getElementById('editAnimalForm').addEventListener('submit', saveEditAnimal);
+        document.getElementById('animalSearch').addEventListener('input', applyFilters);
+        document.getElementById('speciesFilter').addEventListener('change', applyFilters);
+        document.getElementById('genderFilter').addEventListener('change', applyFilters);
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
         
         // Close modal when clicking outside
         window.onclick = function(event) {
-            const modal = document.getElementById('addModal');
-            if (event.target === modal) {
-                closeAddModal();
-            }
+            if (event.target === document.getElementById('addModal')) closeAddModal();
+            if (event.target === document.getElementById('editModal')) closeEditModal();
         }
     </script>
 </body>

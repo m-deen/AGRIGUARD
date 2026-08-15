@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/agriguard-theme.css"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AgriGuard - Health & Vaccination</title>
     <style>
@@ -12,8 +16,8 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
+            font-family: "Source Sans 3", system-ui, sans-serif;
+            background: #F7F4EE;
         }
         
         /* Navbar */
@@ -23,7 +27,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(15,110,86,.06);
             flex-wrap: wrap;
             gap: 15px;
         }
@@ -32,6 +36,7 @@
             font-size: 22px;
             font-weight: bold;
             color: #1D9E75;
+            font-family: "Fraunces", Georgia, serif;
         }
         
         .nav-links {
@@ -41,10 +46,10 @@
         }
         
         .nav-links a {
+            border-radius: 999px;
             text-decoration: none;
             color: #374151;
             padding: 8px 14px;
-            border-radius: 8px;
             font-size: 14px;
             transition: all 0.2s;
         }
@@ -54,24 +59,25 @@
         }
         
         .nav-links a.active {
-            background: #1D9E75;
-            color: white;
-            border: 2px solid #0f6e56;
+            background: #E1F5EE;
+            color: #1D9E75;
+            border: none;
+            border-radius: 999px;
         }
         
         .logout-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
+            background: transparent;
+            color: #B42318;
+            border: 1px solid #E8C4C0;
             padding: 8px 18px;
-            border-radius: 8px;
+            border-radius: 999px;
             cursor: pointer;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 700;
         }
         
         .logout-btn:hover {
-            background: #dc2626;
+            background: #FCE8E6;
         }
         
         /* Container */
@@ -111,9 +117,10 @@
         .stat-card {
             background: white;
             padding: 20px;
-            border-radius: 12px;
+            border-radius: 14px;
             text-align: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(15,110,86,.06);
+            border: 1px solid #E5E1D8;
         }
         
         .stat-value {
@@ -168,10 +175,11 @@
         /* Cards */
         .card {
             background: white;
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(15,110,86,.06);
+            border: 1px solid #E5E1D8;
         }
         
         .card-title {
@@ -251,7 +259,7 @@
         }
         
         .btn-primary:hover {
-            background: #0f6e56;
+            background: #0F6E56;
         }
         
         .btn-secondary {
@@ -373,27 +381,29 @@
 </head>
 <body>
     <div class="navbar">
-        <div class="logo">🌾 AgriGuard</div>
-        <div class="nav-links">
-            <a href="dashboard.html">📊 Dashboard</a>
-            <a href="animals.html">🐄 My Animals</a>
-            <a href="add-animal.html">➕ Add Animal</a>
-            <a href="vaccinations.html">💉 Vaccinations</a>
-            <a href="health.html" class="active">🏥 Health</a>
-            <a href="tracking.html">📍 Tracking</a>
-            <a href="auctions.html">💰 Auctions</a>
-            <a href="chat-bot.html">🤖 AI Chat</a>
-        </div>
-        <button class="logout-btn" onclick="logout()">Logout</button>
-    </div>
-
-    <div class="container">
+  <div class="logo"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> AgriGuard</div>
+  <div class="nav-links">
+    <a href="dashboard.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Dashboard</a>
+    <a href="animals.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 18c-3 0-5-2-5-5 0-2 1-3 2-4-.5-2 1-4 3-4s3.5 2 3 4c1 1 2 2 2 4 0 3-2 5-5 5z"/><path d="M8 10c-1.5-.5-3 0-3.5 1.5M16 10c1.5-.5 3 0 3.5 1.5M10 19v2M14 19v2"/></svg> My Animals</a>
+    <a href="breed-id.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v6a3 3 0 003 3h4a3 3 0 003-3V4M7 20v-6a3 3 0 013-3h4a3 3 0 013 3v6M9 4h.01M15 4h.01M9 20h.01M15 20h.01"/></svg> Breed ID</a>
+    <a href="add-animal.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add Animals</a>
+    <a href="tracking.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg> Tracking</a>
+    <a href="health.html" class="active"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2 4 4 0 017 2c0 5.5-7 10-7 10z"/></svg> Health</a>
+    <a href="vaccinations.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3l7 7M11 6l7 7M4 14l6 6M3 21l4-1 9-9-3-3-9 9-1 4z"/></svg> Vaccination</a>
+    <a href="auctions.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14l-4 4M14 4l6 6M4.5 16.5L9 12l7-7 3 3-7 7-4.5 4.5zM13 19h8"/></svg> Auction</a>
+    <a href="chat-bot.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 01-8 8H7l-4 3v-5a8 8 0 118-6z"/></svg> AI Chat</a>
+  </div>
+  <div class="nav-actions">
+    <button type="button" class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</div>
+<div class="container">
         <div class="page-header">
             <div>
-                <h1>🏥 Health & Vaccination</h1>
+                <h1><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2 4 4 0 017 2c0 5.5-7 10-7 10z"/></svg> Health & Vaccination</h1>
                 <p>Manage vaccination schedules and health records</p>
             </div>
-            <button class="btn-primary" onclick="showTab('log')">➕ Log Vaccination</button>
+            <button class="btn-primary" onclick="showTab('log')"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Log Vaccination</button>
         </div>
 
         <!-- Stats Cards -->
@@ -418,17 +428,17 @@
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab active" onclick="showTab('overview')">📋 Overview</button>
-            <button class="tab" onclick="showTab('upcoming')">📅 Upcoming</button>
-            <button class="tab" onclick="showTab('overdue')">⚠️ Overdue</button>
+            <button class="tab active" onclick="showTab('overview')"> <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg> Overview</button>
+            <button class="tab" onclick="showTab('upcoming')"> <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg> Upcoming</button>
+            <button class="tab" onclick="showTab('overdue')"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 4.3L2.6 18a2 2 0 001.7 3h15.4a2 2 0 001.7-3L13.7 4.3a2 2 0 00-3.4 0z"/></svg> Overdue</button>
             <button class="tab" onclick="showTab('history')">📜 History</button>
-            <button class="tab" onclick="showTab('log')">➕ Log Vaccination</button>
+            <button class="tab" onclick="showTab('log')"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Log Vaccination</button>
         </div>
 
         <!-- Overview Tab -->
         <div id="overviewTab" class="tab-content active">
             <div class="card">
-                <div class="card-title">📋 Vaccination Overview</div>
+                <div class="card-title"> <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg> Vaccination Overview</div>
                 <div id="overviewList"></div>
             </div>
         </div>
@@ -436,7 +446,7 @@
         <!-- Upcoming Tab -->
         <div id="upcomingTab" class="tab-content">
             <div class="card">
-                <div class="card-title">📅 Upcoming Vaccinations (Next 30 Days)</div>
+                <div class="card-title"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg> Upcoming Vaccinations (Next 30 Days)</div>
                 <div id="upcomingList"></div>
             </div>
         </div>
@@ -444,7 +454,7 @@
         <!-- Overdue Tab -->
         <div id="overdueTab" class="tab-content">
             <div class="card">
-                <div class="card-title">⚠️ Overdue Vaccinations</div>
+                <div class="card-title"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 4.3L2.6 18a2 2 0 001.7 3h15.4a2 2 0 001.7-3L13.7 4.3a2 2 0 00-3.4 0z"/></svg> Overdue Vaccinations</div>
                 <div id="overdueList"></div>
             </div>
         </div>
@@ -467,7 +477,7 @@
         <!-- Log Vaccination Tab -->
         <div id="logTab" class="tab-content">
             <div class="card">
-                <div class="card-title">➕ Log a Vaccination</div>
+                <div class="card-title"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Log a Vaccination</div>
                 <div id="logMsg"></div>
                 <div class="form-row">
                     <div class="form-group">
@@ -486,15 +496,17 @@
                     </div>
                     <div class="form-group">
                         <label>Vaccination Date *</label>
-                        <input type="date" id="logDate" class="form-input">
+                        <input type="date" id="logDate" class="form-input" max="">
+                        <div class="help-text" style="font-size:12px;color:#6b7280;margin-top:4px;">Cannot be a future date</div>
                     </div>
                     <div class="form-group">
                         <label>Next Due Date</label>
-                        <input type="date" id="logNextDue" class="form-input">
+                        <input type="date" id="logNextDue" class="form-input" min="">
+                        <div class="help-text" style="font-size:12px;color:#6b7280;margin-top:4px;">Must be on/after vaccination date</div>
                     </div>
                     <div class="form-group">
                         <label>Dose (ml)</label>
-                        <input type="text" id="logDose" class="form-input" placeholder="e.g., 5ml">
+                        <input type="number" id="logDose" class="form-input" min="0" step="0.1" placeholder="e.g., 5">
                     </div>
                     <div class="form-group">
                         <label>Veterinarian</label>
@@ -516,210 +528,415 @@
     <div id="toast" class="toast"></div>
 
     <script>
+        const API_BASE = 'http://localhost:5000';
+        let animals = [];
+        let vaccinations = [];
+
         function getToken() { return localStorage.getItem('agriguard_token'); }
-        
+
         function logout() {
-            localStorage.clear();
+            localStorage.removeItem('agriguard_token');
+            localStorage.removeItem('agriguard_user');
+            localStorage.removeItem('agriguard_role');
             window.location.href = '../login.html';
         }
-        
-        // Demo data
-        let demoAnimals = [
-            { animal_id: 1, name: 'Themba', ear_tag_id: 'AG-001', species: 'Cattle' },
-            { animal_id: 2, name: 'Nala', ear_tag_id: 'AG-002', species: 'Cattle' },
-            { animal_id: 3, name: 'Simba', ear_tag_id: 'AG-003', species: 'Goat' }
-        ];
-        
-        let vaccinations = [
-            { id: 1, animal_id: 1, animal_name: 'Themba', vaccine: 'Anthrax', date: '2025-03-15', due_date: '2026-03-15', status: 'completed', vet: 'Dr. Smith' },
-            { id: 2, animal_id: 2, animal_name: 'Nala', vaccine: 'Botulism', date: '2025-05-10', due_date: '2026-05-10', status: 'completed', vet: 'Dr. Jones' },
-            { id: 3, animal_id: 3, animal_name: 'Simba', vaccine: 'Blackquarter', date: '2025-10-20', due_date: '2026-04-20', status: 'upcoming', vet: '' },
-            { id: 4, animal_id: 1, animal_name: 'Themba', vaccine: 'Lumpy Skin', date: '2025-01-05', due_date: '2025-12-05', status: 'overdue', vet: 'Dr. Smith' }
-        ];
-        
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${isError ? 'error' : ''}`;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 8000);
+        }
+
+        function esc(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
+        function parseDose(raw) {
+            if (raw == null || raw === '') return null;
+            const n = parseFloat(String(raw).replace(/[^\d.]/g, ''));
+            return Number.isFinite(n) ? n : null;
+        }
+
+        function daysFromToday(isoDate) {
+            if (!isoDate) return null;
+            const due = new Date(String(isoDate).slice(0, 10) + 'T00:00:00');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return Math.round((due - today) / 86400000);
+        }
+
+        function deriveStatus(v) {
+            // upcoming = due within next 30 days (including today)
+            const days = daysFromToday(v.due_date);
+            if (days == null) return null;
+            if (days < 0) return 'overdue';
+            if (days <= 30) return 'upcoming';
+            return 'scheduled'; // due later than 30 days
+        }
+
+        function normalizeVaccination(row) {
+            return {
+                id: row.vaccine_id,
+                animal_id: row.animal_id,
+                animal_tag: row.animal_tag || '',
+                species: row.species || '',
+                vaccine: row.vaccine_name || '',
+                date: row.vaccination_date ? String(row.vaccination_date).slice(0, 10) : '',
+                due_date: row.due_date ? String(row.due_date).slice(0, 10) : '',
+                is_completed: !!row.is_completed,
+                given: !!row.is_completed || !!row.vaccination_date,
+                status: deriveStatus(row),
+                vet: row.vet_name || '',
+                dose: row.dosage_ml != null ? String(row.dosage_ml) : '',
+                notes: row.notes || ''
+            };
+        }
+
+        function animalLabel(v) {
+            const tag = v.animal_tag || 'Unknown';
+            return v.species ? `${tag} (${v.species})` : tag;
+        }
+
+        function getAnimalName(animalId) {
+            const a = animals.find(x => x.animal_id === animalId);
+            if (!a) return 'Unknown';
+            return `${a.animal_tag}${a.species ? ' (' + a.species + ')' : ''}`;
+        }
+
+        async function loadAnimals() {
+            try {
+                const r = await fetch(`${API_BASE}/api/animals`, {
+                    headers: { Authorization: `Bearer ${getToken()}` }
+                });
+                const d = await r.json();
+                if (d.status === 'success' || d.success) {
+                    animals = d.data || [];
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('Could not load animals', true);
+            }
+            populateAnimalDropdown();
+        }
+
+        async function loadVaccinations() {
+            try {
+                const r = await fetch(`${API_BASE}/api/health/vaccinations`, {
+                    headers: { Authorization: `Bearer ${getToken()}` }
+                });
+                const d = await r.json();
+                if (d.status === 'success' || d.success) {
+                    vaccinations = (d.data || []).map(normalizeVaccination);
+                } else {
+                    vaccinations = [];
+                    showToast(d.message || 'Could not load vaccinations', true);
+                }
+            } catch (e) {
+                console.error(e);
+                vaccinations = [];
+                showToast('Network error loading vaccinations', true);
+            }
+            updateStats();
+            renderAll();
+        }
+
+        async function loadStats() {
+            try {
+                const r = await fetch(`${API_BASE}/api/health/stats`, {
+                    headers: { Authorization: `Bearer ${getToken()}` }
+                });
+                const d = await r.json();
+                if (!(d.status === 'success' || d.success) || !d.data) return;
+                const s = d.data;
+                document.getElementById('totalVax').textContent = s.total ?? 0;
+                document.getElementById('upcomingVax').textContent = s.upcoming ?? 0;
+                document.getElementById('overdueVax').textContent = s.overdue ?? 0;
+                const rate = Math.round(s.compliance_rate ?? 0);
+                document.getElementById('complianceRate').textContent = rate + '%';
+                document.getElementById('complianceBar').style.width = rate + '%';
+            } catch (_) {
+                updateStats();
+            }
+        }
+
         function updateStats() {
             const total = vaccinations.length;
             const upcoming = vaccinations.filter(v => v.status === 'upcoming').length;
             const overdue = vaccinations.filter(v => v.status === 'overdue').length;
-            const completed = vaccinations.filter(v => v.status === 'completed').length;
-            const compliance = total > 0 ? Math.round((completed / total) * 100) : 100;
-            
+            const completed = vaccinations.filter(v => v.given).length;
+            const compliance = total > 0 ? Math.round(((total - overdue) / total) * 100) : 100;
+
             document.getElementById('totalVax').textContent = total;
             document.getElementById('upcomingVax').textContent = upcoming;
             document.getElementById('overdueVax').textContent = overdue;
             document.getElementById('complianceRate').textContent = compliance + '%';
             document.getElementById('complianceBar').style.width = compliance + '%';
         }
-        
-        function getAnimalName(animalId) {
-            const animal = demoAnimals.find(a => a.animal_id === animalId);
-            return animal ? `${animal.name} (${animal.ear_tag_id})` : 'Unknown';
-        }
-        
+
         function renderOverview() {
             const container = document.getElementById('overviewList');
             if (vaccinations.length === 0) {
-                container.innerHTML = '<div class="empty-state">No vaccination records yet</div>';
+                container.innerHTML = '<div class="empty-state">No vaccination records yet. Log one to get started.</div>';
                 return;
             }
-            container.innerHTML = vaccinations.map(v => `
+            container.innerHTML = vaccinations.map(v => {
+                const label = v.status || (v.given ? 'given' : 'scheduled');
+                const badge = (label === 'given' || label === 'completed')
+                    ? 'green'
+                    : label === 'upcoming'
+                        ? 'amber'
+                        : label === 'scheduled'
+                            ? 'green'
+                            : 'red';
+                return `
                 <div class="vax-row">
                     <div style="flex: 1;">
-                        <strong>${v.vaccine}</strong> — ${getAnimalName(v.animal_id)}
-                        <div style="font-size: 12px; color: #6b7280;">Due: ${v.due_date || 'N/A'}</div>
+                        <strong>${esc(v.vaccine)}</strong> — ${esc(animalLabel(v))}
+                        <div style="font-size: 12px; color: #6b7280;">Next due: ${esc(v.due_date || 'N/A')}</div>
                     </div>
-                    <span class="badge badge-${v.status === 'completed' ? 'green' : v.status === 'upcoming' ? 'amber' : 'red'}">${v.status}</span>
-                </div>
-            `).join('');
+                    <span class="badge badge-${badge}">${esc(label)}</span>
+                </div>`;
+            }).join('');
         }
-        
+
         function renderUpcoming() {
             const upcoming = vaccinations.filter(v => v.status === 'upcoming');
             const container = document.getElementById('upcomingList');
             if (upcoming.length === 0) {
-                container.innerHTML = '<div class="empty-state">✅ No upcoming vaccinations</div>';
+                container.innerHTML = '<div class="empty-state">No vaccinations due in the next 30 days</div>';
                 return;
             }
             container.innerHTML = upcoming.map(v => `
                 <div class="vax-row">
                     <div style="flex: 1;">
-                        <strong>${v.vaccine}</strong> — ${getAnimalName(v.animal_id)}
-                        <div style="font-size: 12px;">Due: ${v.due_date}</div>
+                        <strong>${esc(v.vaccine)}</strong> — ${esc(animalLabel(v))}
+                        <div style="font-size: 12px;">Due: ${esc(v.due_date)} (${daysFromToday(v.due_date)} day(s))</div>
                     </div>
                     <button class="btn-primary" style="padding: 6px 16px;" onclick="markComplete(${v.id})">Mark Done</button>
                 </div>
             `).join('');
         }
-        
+
         function renderOverdue() {
             const overdue = vaccinations.filter(v => v.status === 'overdue');
             const container = document.getElementById('overdueList');
             if (overdue.length === 0) {
-                container.innerHTML = '<div class="empty-state">✅ No overdue vaccinations</div>';
+                container.innerHTML = '<div class="empty-state">No overdue vaccinations</div>';
                 return;
             }
             container.innerHTML = overdue.map(v => `
                 <div class="vax-row" style="background: #fee2e2;">
                     <div style="flex: 1;">
-                        <strong>${v.vaccine}</strong> — ${getAnimalName(v.animal_id)}
-                        <div style="font-size: 12px; color: #991b1b;">Was due: ${v.due_date}</div>
+                        <strong>${esc(v.vaccine)}</strong> — ${esc(animalLabel(v))}
+                        <div style="font-size: 12px; color: #991b1b;">Was due: ${esc(v.due_date)}</div>
                     </div>
                     <button class="btn-primary" style="background: #ef4444; padding: 6px 16px;" onclick="markComplete(${v.id})">Vaccinate Now</button>
                 </div>
             `).join('');
         }
-        
+
         function renderHistory() {
             const container = document.getElementById('historyTable');
-            container.innerHTML = vaccinations.map(v => `
+            const history = vaccinations.filter(v => v.given);
+            if (!history.length) {
+                container.innerHTML = '<tr><td colspan="6" class="empty-state">No records yet</td></tr>';
+                return;
+            }
+            container.innerHTML = history.map(v => `
                 <tr>
-                    <td><strong>${getAnimalName(v.animal_id)}</strong></td>
-                    <td>${v.vaccine}</td>
-                    <td>${v.date}</td>
-                    <td>${v.due_date || '-'}</td>
-                    <td><span class="badge badge-${v.status === 'completed' ? 'green' : v.status === 'upcoming' ? 'amber' : 'red'}">${v.status}</span></td>
-                    <td>${v.vet || '-'}</td>
+                    <td><strong>${esc(animalLabel(v))}</strong></td>
+                    <td>${esc(v.vaccine)}</td>
+                    <td>${esc(v.date || '-')}</td>
+                    <td>${esc(v.due_date || '-')}</td>
+                    <td><span class="badge badge-green">given</span></td>
+                    <td>${esc(v.vet || '-')}</td>
                 </tr>
             `).join('');
         }
-        
-        function markComplete(id) {
-            const index = vaccinations.findIndex(v => v.id === id);
-            if (index !== -1) {
-                vaccinations[index].status = 'completed';
-                vaccinations[index].date = new Date().toISOString().split('T')[0];
-                updateStats();
-                renderAll();
-                showToast('✅ Vaccination marked as completed!');
+
+        async function markComplete(id) {
+            try {
+                const r = await fetch(`${API_BASE}/api/health/vaccinations/${id}/complete`, {
+                    method: 'PUT',
+                    headers: { Authorization: `Bearer ${getToken()}` }
+                });
+                const d = await r.json();
+                if (!(d.status === 'success' || d.success)) {
+                    showToast(d.message || 'Could not update', true);
+                    return;
+                }
+                showToast('Vaccination marked as completed!');
+                await refreshHealth();
+            } catch (e) {
+                showToast('Network error', true);
             }
         }
-        
+
         function renderAll() {
             renderOverview();
             renderUpcoming();
             renderOverdue();
             renderHistory();
         }
-        
+
         function showTab(tabName) {
             const tabs = ['overview', 'upcoming', 'overdue', 'history', 'log'];
             tabs.forEach(t => {
                 const tabEl = document.getElementById(t + 'Tab');
-                const btnEl = document.querySelector(`.tab:nth-child(${tabs.indexOf(t) + 1})`);
                 if (tabEl) tabEl.classList.remove('active');
-                if (btnEl) btnEl.classList.remove('active');
             });
+            document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
             document.getElementById(tabName + 'Tab').classList.add('active');
             const btns = document.querySelectorAll('.tab');
             btns[tabs.indexOf(tabName)].classList.add('active');
         }
-        
-        function logVaccination() {
+
+        function todayISODate() {
+            const d = new Date();
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function addDaysISO(isoDate, days) {
+            const d = new Date(isoDate + 'T00:00:00');
+            d.setDate(d.getDate() + days);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function syncLogDateLimits() {
+            const today = todayISODate();
+            const logDate = document.getElementById('logDate');
+            const nextDue = document.getElementById('logNextDue');
+            logDate.max = today;
+            if (!logDate.value || logDate.value > today) logDate.value = today;
+            nextDue.min = logDate.value || today;
+            if (nextDue.value && nextDue.value < nextDue.min) nextDue.value = '';
+        }
+
+        async function logVaccination() {
             const animalId = document.getElementById('logAnimal').value;
             const vaccine = document.getElementById('logVaccine').value;
             const date = document.getElementById('logDate').value;
-            
+            const dueDate = document.getElementById('logNextDue').value;
+            const doseRaw = document.getElementById('logDose').value;
+            const msg = document.getElementById('logMsg');
+
             if (!animalId || !vaccine || !date) {
-                document.getElementById('logMsg').innerHTML = '<div class="alert alert-danger">Please fill all required fields</div>';
+                msg.innerHTML = '<div class="alert alert-danger">Please fill all required fields</div>';
                 return;
             }
-            
-            const newVax = {
-                id: vaccinations.length + 1,
-                animal_id: parseInt(animalId),
-                animal_name: getAnimalName(parseInt(animalId)),
-                vaccine: vaccine,
-                date: date,
-                due_date: document.getElementById('logNextDue').value || new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0],
-                status: 'completed',
-                vet: document.getElementById('logVet').value,
-                dose: document.getElementById('logDose').value,
-                notes: document.getElementById('logNotes').value
+            if (date > todayISODate()) {
+                msg.innerHTML = '<div class="alert alert-danger">Vaccination date cannot be in the future</div>';
+                showToast('Vaccination date cannot be in the future', true);
+                return;
+            }
+            if (dueDate && dueDate < date) {
+                msg.innerHTML = '<div class="alert alert-danger">Next due date cannot be before vaccination date</div>';
+                showToast('Next due date cannot be before vaccination date', true);
+                return;
+            }
+            if (doseRaw !== '' && Number(doseRaw) < 0) {
+                msg.innerHTML = '<div class="alert alert-danger">Dose cannot be negative</div>';
+                showToast('Dose cannot be negative', true);
+                return;
+            }
+
+            const payload = {
+                animal_id: parseInt(animalId, 10),
+                vaccine_name: vaccine,
+                vaccination_date: date,
+                due_date: dueDate || null,
+                dosage_ml: doseRaw === '' ? null : parseFloat(doseRaw),
+                vet_name: document.getElementById('logVet').value || '',
+                notes: document.getElementById('logNotes').value || '',
+                is_completed: true
             };
-            
-            vaccinations.unshift(newVax);
-            updateStats();
-            renderAll();
-            showToast('✅ Vaccination logged successfully!');
-            clearLogForm();
-            showTab('history');
+
+            try {
+                const r = await fetch(`${API_BASE}/api/health/vaccinations`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${getToken()}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const d = await r.json();
+                if (!(d.status === 'success' || d.success)) {
+                    msg.innerHTML = `<div class="alert alert-danger">${esc(d.message || 'Save failed')}</div>`;
+                    showToast(d.message || 'Save failed', true);
+                    return;
+                }
+                showToast('Vaccination logged successfully!');
+                clearLogForm();
+                await refreshHealth();
+                showTab('history');
+            } catch (e) {
+                msg.innerHTML = '<div class="alert alert-danger">Network error. Is Flask running?</div>';
+                showToast('Network error', true);
+            }
         }
-        
+
         function clearLogForm() {
             document.getElementById('logAnimal').value = '';
             document.getElementById('logVaccine').value = '';
-            document.getElementById('logDate').value = new Date().toISOString().split('T')[0];
             document.getElementById('logNextDue').value = '';
             document.getElementById('logDose').value = '';
             document.getElementById('logVet').value = '';
             document.getElementById('logNotes').value = '';
             document.getElementById('logMsg').innerHTML = '';
+            syncLogDateLimits();
         }
-        
-        // Populate animal dropdown
+
         function populateAnimalDropdown() {
             const select = document.getElementById('logAnimal');
-            select.innerHTML = '<option value="">Select animal</option>' + 
-                demoAnimals.map(a => `<option value="${a.animal_id}">${a.name} (${a.ear_tag_id})</option>`).join('');
+            if (!animals.length) {
+                select.innerHTML = '<option value="">No animals found — add one first</option>';
+                return;
+            }
+            select.innerHTML = '<option value="">Select animal</option>' +
+                animals.map(a =>
+                    `<option value="${a.animal_id}">${esc(a.animal_tag)} — ${esc(a.species || '')}${a.breed ? ' / ' + esc(a.breed) : ''}</option>`
+                ).join('');
         }
-        
-        // Auto-calculate next due date
-        document.getElementById('logVaccine').addEventListener('change', function() {
-            const intervals = { Anthrax: 365, Botulism: 365, Blackquarter: 180, Brucellosis: 365, 'Rift Valley Fever': 365, 'Lumpy Skin Disease': 365, 'Pulpy Kidney': 365, 'Blue Tongue': 365 };
+
+        async function refreshHealth() {
+            await loadVaccinations();
+            await loadStats();
+        }
+
+        document.getElementById('logVaccine').addEventListener('change', function () {
+            const intervals = {
+                Anthrax: 365, Botulism: 365, Blackquarter: 180, Brucellosis: 365,
+                'Rift Valley Fever': 365, 'Lumpy Skin Disease': 365,
+                'Pulpy Kidney': 365, 'Blue Tongue': 365
+            };
             const days = intervals[this.value];
+            const vaxDate = document.getElementById('logDate').value || todayISODate();
             if (days) {
-                const next = new Date();
-                next.setDate(next.getDate() + days);
-                document.getElementById('logNextDue').value = next.toISOString().split('T')[0];
+                document.getElementById('logNextDue').value = addDaysISO(vaxDate, days);
+                document.getElementById('logNextDue').min = vaxDate;
             }
         });
-        
-        // Initialize
+
+        document.getElementById('logDate').addEventListener('change', () => {
+            syncLogDateLimits();
+            const vaccine = document.getElementById('logVaccine').value;
+            if (vaccine) document.getElementById('logVaccine').dispatchEvent(new Event('change'));
+        });
+
         if (!getToken()) window.location.href = '../login.html';
-        document.getElementById('logDate').valueAsDate = new Date();
-        populateAnimalDropdown();
-        updateStats();
-        renderAll();
+        syncLogDateLimits();
+        loadAnimals().then(refreshHealth);
     </script>
 </body>
 </html>

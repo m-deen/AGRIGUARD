@@ -13,6 +13,9 @@ __pycache__/
 Backend/ml/models/
 ml/models/
 
+# Local polygon geofence fallback (when DB can't store polygon_json)
+Backend/data/geofence_polygons/*.json
+
 # Node / frontend
 node_modules/
 dist/

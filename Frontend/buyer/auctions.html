@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/agriguard-theme.css">
     <title>AgriGuard - Browse Auctions</title>
     <style>
         * {
@@ -12,8 +16,9 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
+            font-family: "Source Sans 3", system-ui, sans-serif;
+            background: #F7F4EE;
+            color: #163528;
         }
         
         /* Navbar */
@@ -50,28 +55,29 @@
         }
         
         .nav-links a:hover {
-            background: #f3f4f6;
+            background: #E1F5EE;
+            color: #1D9E75;
         }
         
         .nav-links a.active {
-            background: #1D9E75;
-            color: white;
-            border: 2px solid #0f6e56;
+            background: #E1F5EE;
+            color: #1D9E75;
+            border: none;
         }
         
         .logout-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
+            background: transparent;
+            color: #B42318;
+            border: 1px solid #E8C4C0;
             padding: 8px 18px;
-            border-radius: 8px;
+            border-radius: 999px;
             cursor: pointer;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 700;
         }
         
         .logout-btn:hover {
-            background: #dc2626;
+            background: #FCE8E6;
         }
         
         /* Container */
@@ -229,7 +235,7 @@
         }
         
         .bid-button:hover {
-            background: #0f6e56;
+            background: #0F6E56;
         }
         
         /* Modal */
@@ -334,12 +340,12 @@
 </head>
 <body>
     <div class="navbar">
-        <div class="logo">🌾 AgriGuard</div>
+        <div class="logo"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> AgriGuard</div>
         <div class="nav-links">
-            <a href="../farmer/dashboard.html">📊 Dashboard</a>
-            <a href="auctions.html" class="active">💰 Browse Auctions</a>
+            <a href="dashboard.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Dashboard</a>
+            <a href="auctions.html" class="active"> <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14l-4 4M14 4l6 6M4.5 16.5L9 12l7-7 3 3-7 7-4.5 4.5zM13 19h8"/></svg> Browse Auctions</a>
             <a href="bid-history.html">📜 My Bids</a>
-            <a href="watchlist.html">⭐ Watchlist</a>
+            <a href="watchlist.html"> <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.1 6.3L22 9.3l-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg> Watchlist</a>
         </div>
         <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
@@ -347,7 +353,7 @@
     <div class="container">
         <div class="page-header">
             <div>
-                <h1>💰 Livestock Auctions</h1>
+                <h1><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14l-4 4M14 4l6 6M4.5 16.5L9 12l7-7 3 3-7 7-4.5 4.5zM13 19h8"/></svg> Livestock Auctions</h1>
                 <p>Browse and bid on available livestock</p>
             </div>
         </div>
@@ -356,7 +362,7 @@
         <div class="stats-row">
             <div class="stat-card">
                 <div class="stat-value" id="activeAuctions">0</div>
-                <div class="stat-label">Active Auctions</div>
+                <div class="stat-label"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14l-4 4M14 4l6 6M4.5 16.5L9 12l7-7 3 3-7 7-4.5 4.5zM13 19h8"/></svg> Active Auctions</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="myBids">0</div>
@@ -373,9 +379,9 @@
             <input type="text" id="searchInput" placeholder="🔍 Search auctions..." oninput="filterAuctions()">
             <select id="speciesFilter" onchange="filterAuctions()">
                 <option value="">All Species</option>
-                <option value="Cattle">🐄 Cattle</option>
-                <option value="Goat">🐐 Goat</option>
-                <option value="Sheep">🐑 Sheep</option>
+                <option value="Cattle"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="11" r="5"/><path d="M5 8l2 2M19 8l-2 2M8 18v2M16 18v2M9 7C7 5 5 5 4 6M15 7c2-2 4-2 5-1"/></svg> Cattle</option>
+                <option value="Goat"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14c-2.5 0-4-1.5-4-3.5S10 7 12 7s4 1.5 4 3.5S14.5 14 12 14z"/><path d="M8 8L5 4M16 8l3-4M10 18v2M14 18v2"/></svg> Goat</option>
+                <option value="Sheep"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><circle cx="7" cy="11" r="2"/><circle cx="17" cy="11" r="2"/><circle cx="9" cy="16" r="2"/><circle cx="15" cy="16" r="2"/><path d="M10 8V6M14 8V6"/></svg> Sheep</option>
             </select>
         </div>
 
@@ -415,7 +421,7 @@
             toast.textContent = message;
             toast.className = `toast ${isError ? 'error' : ''}`;
             toast.style.display = 'block';
-            setTimeout(() => toast.style.display = 'none', 3000);
+            setTimeout(() => toast.style.display = 'none', 8000);
         }
         
         function logout() {
@@ -471,7 +477,7 @@
             const container = document.getElementById('auctionGrid');
             
             if (filtered.length === 0) {
-                container.innerHTML = '<div class="empty-state">🏷️ No auctions found</div>';
+                container.innerHTML = '<div class="empty-state"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12l-8 8-9-9V3h8l9 9z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg> No auctions found</div>';
                 return;
             }
             
@@ -498,9 +504,9 @@
         
         function getSpeciesIcon(species) {
             const icons = {
-                'Cattle': '🐄',
-                'Goat': '🐐',
-                'Sheep': '🐑',
+                'Cattle': '',
+                'Goat': '',
+                'Sheep': '',
                 'Pig': '🐷'
             };
             return icons[species] || '🐾';

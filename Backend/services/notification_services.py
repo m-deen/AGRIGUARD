@@ -4,6 +4,7 @@ import logging
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.utils import formataddr, parseaddr
 from dotenv import load_dotenv
 from datetime import datetime
 
@@ -19,7 +20,19 @@ class NotificationService:
         self.email_port = int(os.getenv('EMAIL_PORT', 587))
         self.email_user = os.getenv('EMAIL_USER')
         self.email_password = os.getenv('EMAIL_PASSWORD')
-        self.email_from = os.getenv('EMAIL_FROM', self.email_user)
+        self.email_from_name = (os.getenv('EMAIL_FROM_NAME') or 'AgriGuard').strip()
+        # Public From address (what recipients see). SMTP still logs in with EMAIL_USER.
+        raw_from = (
+            os.getenv('EMAIL_FROM')
+            or 'noreply@agriguard.co.za'
+        ).strip()
+        # Allow EMAIL_FROM="AgriGuard <noreply@agriguard.co.za>" or just the address
+        name, addr = parseaddr(raw_from)
+        self.email_from_addr = addr or 'noreply@agriguard.co.za'
+        self.email_from = formataddr((
+            name or self.email_from_name,
+            self.email_from_addr,
+        ))
         
         # Remove spaces from app password if present
         if self.email_password:
@@ -83,7 +96,7 @@ View Dashboard: http://localhost:5000/dashboard
 
 {'='*50}
 This is an automated alert from the AgriGuard System.
-© 2024 AgriGuard - Livestock Monitoring System
+© {datetime.now().year} AgriGuard - Livestock Monitoring System
 """
             
             logger.info(f"📧 Sending alert to: {email}")
@@ -102,16 +115,57 @@ This is an automated alert from the AgriGuard System.
             logger.error(f"❌ Alert failed: {str(e)}")
             return False
     
-    def send_test_email(self, email):
-        """Send a test email to verify configuration"""
-        return self.send_alert(
-            email=email,
-            animal_tag="TEST123",
-            anomaly_type="Test Alert",
-            location="Test Location",
-            severity="Low",
-            details="This is a test email from AgriGuard system."
-        )
+    def send_password_reset(self, email, reset_link, expires_hours=1):
+        """Send a password-reset email with a one-time link."""
+        if not email or not reset_link:
+            logger.error("Password reset email missing recipient or link")
+            return False
+
+        subject = "AgriGuard password reset"
+        body = f"""AgriGuard Password Reset
+{'=' * 50}
+
+We received a request to reset the password for this account.
+
+Open this link to choose a new password (valid for {expires_hours} hour(s)):
+
+{reset_link}
+
+If you did not request this, you can ignore this email.
+Your password will stay the same.
+
+{'=' * 50}
+This is an automated message from AgriGuard.
+"""
+        logger.info("Sending password reset email to %s", email)
+        return self._send_email(email, subject, body)
+
+    def send_email_verification(self, email, verify_link, first_name="", expires_hours=24):
+        """Send account email-verification link."""
+        if not email or not verify_link:
+            logger.error("Verification email missing recipient or link")
+            return False
+
+        name = first_name or "there"
+        subject = "Verify your AgriGuard account"
+        body = f"""AgriGuard Email Verification
+{'=' * 50}
+
+Hi {name},
+
+Thanks for registering with AgriGuard.
+Please verify your email address by opening this link
+(valid for {expires_hours} hour(s)):
+
+{verify_link}
+
+If you did not create an AgriGuard account, you can ignore this email.
+
+{'=' * 50}
+This is an automated message from AgriGuard.
+"""
+        logger.info("Sending verification email to %s", email)
+        return self._send_email(email, subject, body)
     
     def send_email_alert(self, email, animal_tag, **kwargs):
         """
@@ -138,36 +192,6 @@ This is an automated alert from the AgriGuard System.
             severity=severity,
             details=details
         )
-    
-    # ============ FIXED METHOD ============
-    def send_anomaly_alerts(self, user, animal_tag, anomaly_type, speed, lat, lon):
-        """
-        Send alerts for anomaly detection (called from simulate_gps)
-        
-        Args:
-            user (dict): User object with 'email' and 'first_name'
-            animal_tag (str): Animal identification tag
-            anomaly_type (str): Type of anomaly detected
-            speed (float): Speed of the animal
-            lat (float): Latitude
-            lon (float): Longitude
-        
-        Returns:
-            bool: True if email sent successfully
-        """
-        email = user.get('email')
-        if not email:
-            return False
-        
-        return self.send_alert(
-            email=email,
-            animal_tag=animal_tag,
-            anomaly_type=anomaly_type or 'GPS Anomaly',
-            location=f"Lat: {lat:.6f}, Lon: {lon:.6f}",
-            severity="High",
-            details=f"Speed: {speed:.1f} km/h - GPS anomaly detected during simulation"
-        )
-    # =====================================
     
     def _send_email(self, to_email, subject, body):
         """Internal method to send email via SMTP"""
@@ -200,44 +224,3 @@ This is an automated alert from the AgriGuard System.
         except Exception as e:
             logger.error(f"❌ Email failed: {str(e)}")
             return False
-    
-    def send_bulk_alerts(self, recipients, animal_tag, anomaly_type, location, severity="Medium", details=""):
-        """
-        Send alerts to multiple recipients
-        
-        Args:
-            recipients (list): List of email addresses
-            animal_tag (str): Animal identification tag
-            anomaly_type (str): Type of anomaly detected
-            location (str): Location of the animal
-            severity (str): High, Medium, or Low
-            details (str): Additional details
-        
-        Returns:
-            dict: Summary of sent alerts
-        """
-        results = {
-            'total': len(recipients),
-            'sent': 0,
-            'failed': 0,
-            'failed_emails': []
-        }
-        
-        for email in recipients:
-            success = self.send_alert(
-                email=email,
-                animal_tag=animal_tag,
-                anomaly_type=anomaly_type,
-                location=location,
-                severity=severity,
-                details=details
-            )
-            
-            if success:
-                results['sent'] += 1
-            else:
-                results['failed'] += 1
-                results['failed_emails'].append(email)
-        
-        logger.info(f"📊 Bulk alerts: {results['sent']} sent, {results['failed']} failed")
-        return results

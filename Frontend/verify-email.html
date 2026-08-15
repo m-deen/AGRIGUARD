@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AgriGuard — Verify Email</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/variables.css"/>
+  <link rel="stylesheet" href="css/agriguard-theme.css"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      font-family:var(--font);color:var(--ink);min-height:100vh;
+      display:grid;place-items:center;padding:32px 16px;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 15%, rgba(29,158,117,.55), transparent 55%),
+        radial-gradient(ellipse 70% 50% at 90% 80%, rgba(15,110,86,.7), transparent 50%),
+        linear-gradient(160deg, #0F6E56 0%, #0a2f24 48%, #123d30 100%);
+    }
+    .card{
+      width:100%;max-width:440px;background:rgba(255,255,255,.97);
+      border:1px solid rgba(255,255,255,.65);border-radius:22px;
+      padding:34px 30px;box-shadow:0 30px 60px rgba(0,0,0,.28);text-align:center;
+      position:relative;overflow:hidden;
+      animation:cardIn .55s cubic-bezier(.22,1,.36,1) both;
+    }
+    .card::before{
+      content:"";position:absolute;left:0;right:0;top:0;height:4px;
+      background:linear-gradient(90deg,#0F6E56,#1D9E75,#7BC9AE);
+    }
+    @keyframes cardIn{from{opacity:0;transform:translateY(22px) scale(.97)}to{opacity:1;transform:none}}
+    .brand-icon{
+      width:64px;height:64px;background:linear-gradient(145deg,#1D9E75,#0F6E56);border-radius:18px;
+      display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;color:#fff;
+      box-shadow:0 12px 28px rgba(29,158,117,.4);
+    }
+    h1{font-family:var(--display);font-size:30px;color:var(--green);margin-bottom:8px;letter-spacing:-.02em}
+    p{font-size:14px;color:var(--gray-600);line-height:1.5}
+    .alert{margin-top:16px;padding:12px;border-radius:12px;font-size:13px;display:none}
+    .alert.ok{display:block;background:var(--green-soft);color:var(--green-dark);border:1px solid var(--green-line)}
+    .alert.err{display:block;background:var(--red-light);color:var(--red);border:1px solid #E8C4C0}
+    .back{display:inline-block;margin-top:18px;color:var(--green);font-size:13px;text-decoration:none;font-weight:700}
+    button{
+      margin-top:14px;padding:12px 18px;border:none;border-radius:999px;
+      background:linear-gradient(180deg,#22a87d,#1D9E75);color:#fff;font-weight:700;cursor:pointer;font-size:13px;font-family:inherit;
+      box-shadow:0 10px 24px rgba(29,158,117,.35);
+    }
+    button:hover:not(:disabled){filter:brightness(1.03)}
+    button:disabled{opacity:.6;cursor:not-allowed}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+    </div>
+    <h1>Verify Email</h1>
+    <p id="statusText">Confirming your AgriGuard account…</p>
+    <div id="msg" class="alert"></div>
+    <button id="resendBtn" style="display:none" onclick="resend()">Resend verification email</button>
+    <a class="back" href="login.html">Back to login</a>
+  </div>
+
+<script>
+const API = 'http://localhost:5000';
+const token = decodeURIComponent(new URLSearchParams(window.location.search).get('token') || '').trim();
+let pendingEmail = '';
+
+function show(msg, ok){
+  const el = document.getElementById('msg');
+  el.textContent = msg;
+  el.className = 'alert ' + (ok ? 'ok' : 'err');
+}
+
+async function verify(){
+  if (!token) {
+    document.getElementById('statusText').textContent = 'Missing verification token.';
+    show('Open the link from your email, or request a new one from login.', false);
+    document.getElementById('resendBtn').style.display = 'inline-block';
+    return;
+  }
+  try {
+    const r = await fetch(`${API}/api/verify-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    const d = await r.json();
+    if (d.status === 'success' || d.success) {
+      document.getElementById('statusText').textContent = 'You are verified.';
+      show(d.message || 'Email verified. You can sign in now.', true);
+      if (d.email) {
+        try { localStorage.setItem('agriguard_saved_email', d.email); } catch (_) {}
+      }
+      setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+    } else {
+      document.getElementById('statusText').textContent = 'Verification failed.';
+      show(d.message || 'Invalid or expired link.', false);
+      document.getElementById('resendBtn').style.display = 'inline-block';
+    }
+  } catch (e) {
+    document.getElementById('statusText').textContent = 'Cannot reach API.';
+    show('Is Flask running on :5000?', false);
+  }
+}
+
+async function resend(){
+  const email = prompt('Enter the email you registered with:') || '';
+  if (!email.trim()) return;
+  const btn = document.getElementById('resendBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    const r = await fetch(`${API}/api/resend-verification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim().toLowerCase() })
+    });
+    const d = await r.json();
+    if (d.verify_link) {
+      show((d.message || 'Use this link:') + ' ', false);
+      const a = document.createElement('a');
+      a.href = d.verify_link;
+      a.textContent = 'Open verification link';
+      a.style.color = '#1D9E75';
+      document.getElementById('msg').appendChild(document.createElement('br'));
+      document.getElementById('msg').appendChild(a);
+      document.getElementById('msg').className = 'alert ok';
+    } else {
+      show(d.message || 'If the account exists, a new link was sent.', true);
+    }
+  } catch (e) {
+    show('Could not resend. Check API connection.', false);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Resend verification email';
+  }
+}
+
+verify();
+</script>
+</body>
+</html>

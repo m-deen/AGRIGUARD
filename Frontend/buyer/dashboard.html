@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/agriguard-theme.css">
+    <title>AgriGuard - Buyer Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: "Source Sans 3", system-ui, sans-serif;
+            background: #F7F4EE;
+            color: #163528;
+        }
+
+        .navbar {
+            background: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1D9E75;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #374151;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .nav-links a:hover {
+            background: #E1F5EE;
+            color: #1D9E75;
+        }
+
+        .nav-links a.active {
+            background: #E1F5EE;
+            color: #1D9E75;
+        }
+
+        .logout-btn {
+            background: transparent;
+            color: #B42318;
+            border: 1px solid #E8C4C0;
+            padding: 8px 18px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .logout-btn:hover { background: #FCE8E6; }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .page-header { margin-bottom: 25px; }
+
+        .page-header h1 {
+            font-size: 28px;
+            color: #111827;
+        }
+
+        .page-header p {
+            color: #6b7280;
+            margin-top: 5px;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1D9E75;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+
+        .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .quick-card {
+            display: block;
+            background: white;
+            border: 1px solid #E5E1D8;
+            border-radius: 12px;
+            padding: 20px;
+            text-decoration: none;
+            color: inherit;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            transition: border-color 0.2s, transform 0.2s;
+        }
+
+        .quick-card:hover {
+            border-color: #1D9E75;
+            transform: translateY(-2px);
+        }
+
+        .quick-card h3 {
+            font-size: 16px;
+            margin-bottom: 6px;
+            color: #111827;
+        }
+
+        .quick-card p {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .panel h2 {
+            font-size: 18px;
+            margin-bottom: 14px;
+            color: #111827;
+        }
+
+        .auction-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .auction-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border: 1px solid #E5E1D8;
+            border-radius: 10px;
+            flex-wrap: wrap;
+        }
+
+        .auction-row strong { font-size: 14px; }
+
+        .auction-row .meta {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+
+        .auction-row .bid {
+            font-weight: 700;
+            color: #1D9E75;
+            font-size: 15px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6b7280;
+        }
+
+        .empty-state a {
+            color: #1D9E75;
+            font-weight: 600;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #1D9E75;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+        }
+
+        .toast.error { background: #ef4444; }
+
+        @media (max-width: 768px) {
+            .container { padding: 15px; }
+            .stats-row,
+            .quick-grid { grid-template-columns: 1fr; }
+            .nav-links { justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> AgriGuard</div>
+        <div class="nav-links">
+            <a href="dashboard.html" class="active"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Dashboard</a>
+            <a href="auctions.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14l-4 4M14 4l6 6M4.5 16.5L9 12l7-7 3 3-7 7-4.5 4.5zM13 19h8"/></svg> Browse Auctions</a>
+            <a href="bid-history.html">My Bids</a>
+            <a href="watchlist.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.1 6.3L22 9.3l-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg> Watchlist</a>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>Buyer Dashboard</h1>
+            <p id="welcomeSub">Browse auctions, track bids, and manage your watchlist.</p>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value" id="activeAuctions">0</div>
+                <div class="stat-label">Active Auctions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="myBids">0</div>
+                <div class="stat-label">My Active Bids</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="watchCount">0</div>
+                <div class="stat-label">Watchlist</div>
+            </div>
+        </div>
+
+        <div class="quick-grid">
+            <a class="quick-card" href="auctions.html">
+                <h3>Browse Auctions</h3>
+                <p>Find livestock listings and place bids.</p>
+            </a>
+            <a class="quick-card" href="bid-history.html">
+                <h3>My Bids</h3>
+                <p>Review active, won, and lost bids.</p>
+            </a>
+            <a class="quick-card" href="watchlist.html">
+                <h3>Watchlist</h3>
+                <p>Keep an eye on auctions you follow.</p>
+            </a>
+        </div>
+
+        <div class="panel">
+            <h2>Ending soon</h2>
+            <div class="auction-list" id="endingSoon"></div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+
+        function getToken() {
+            return localStorage.getItem('agriguard_token');
+        }
+
+        function getUser() {
+            const user = localStorage.getItem('agriguard_user');
+            return user ? JSON.parse(user) : null;
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${isError ? 'error' : ''}`;
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 8000);
+        }
+
+        function logout() {
+            localStorage.removeItem('agriguard_token');
+            localStorage.removeItem('agriguard_user');
+            localStorage.removeItem('agriguard_role');
+            window.location.href = '../login.html';
+        }
+
+        function requireBuyer() {
+            if (!getToken()) {
+                window.location.href = '../login.html';
+                return;
+            }
+            const user = getUser();
+            if (user && user.role && user.role.toLowerCase() !== 'buyer') {
+                if (user.role.toLowerCase() === 'farmer') {
+                    window.location.href = '../farmer/dashboard.html';
+                } else if (user.role.toLowerCase() === 'admin') {
+                    window.location.href = '../admin/users.html';
+                }
+            }
+        }
+
+        function formatTimeLeft(endTime) {
+            const diff = new Date(endTime) - new Date();
+            if (diff <= 0 || !endTime) return 'Ended';
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % 86400000) / 3600000);
+            if (days > 0) return `${days}d ${hours}h left`;
+            if (hours > 0) return `${hours}h left`;
+            return `${Math.floor(diff / 60000)}m left`;
+        }
+
+        async function loadDashboard() {
+            const user = getUser();
+            if (user) {
+                const name = user.first_name || user.full_name || user.email || 'Buyer';
+                document.getElementById('welcomeSub').textContent =
+                    `Welcome back, ${name}. Browse auctions, track bids, and manage your watchlist.`;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auctions`, {
+                    headers: { Authorization: `Bearer ${getToken()}` }
+                });
+                const result = await response.json();
+                const auctions = (result.status === 'success' && result.data) ? result.data : [];
+
+                document.getElementById('activeAuctions').textContent = auctions.length;
+
+                const ending = [...auctions]
+                    .filter(a => a.auction_end)
+                    .sort((a, b) => new Date(a.auction_end) - new Date(b.auction_end))
+                    .slice(0, 5);
+
+                const list = document.getElementById('endingSoon');
+                if (ending.length === 0) {
+                    list.innerHTML = '<div class="empty-state">No active auctions yet. <a href="auctions.html">Browse auctions</a></div>';
+                } else {
+                    list.innerHTML = ending.map(a => `
+                        <div class="auction-row">
+                            <div>
+                                <strong>${a.title || 'Livestock Auction'}</strong>
+                                <div class="meta">${a.species || 'Various'} · ${formatTimeLeft(a.auction_end)}</div>
+                            </div>
+                            <div class="bid">R${(a.current_bid || a.starting_price || 0).toLocaleString()}</div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error(error);
+                document.getElementById('endingSoon').innerHTML =
+                    '<div class="empty-state">Could not load auctions. <a href="auctions.html">Try Browse Auctions</a></div>';
+                showToast('Error loading dashboard', true);
+            }
+
+            // Bid / watchlist counts use local storage until dedicated APIs are wired
+            try {
+                const bids = JSON.parse(localStorage.getItem('agriguard_buyer_bids') || '[]');
+                const watch = JSON.parse(localStorage.getItem('agriguard_watchlist') || '[]');
+                document.getElementById('myBids').textContent = bids.filter(b => b.status === 'active').length || 0;
+                document.getElementById('watchCount').textContent = watch.length || 0;
+            } catch (_) {
+                document.getElementById('myBids').textContent = '0';
+                document.getElementById('watchCount').textContent = '0';
+            }
+        }
+
+        requireBuyer();
+        loadDashboard();
+    </script>
+</body>
+</html>

@@ -1,0 +1,432 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&display=swap");
+@import url("./variables.css");
+
+html, body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink);
+}
+
+h1, h2, .brand-name, .navbar-brand, .logo, .display, .page-title {
+  font-family: var(--display);
+  letter-spacing: -0.02em;
+}
+
+h1, h2, .page-title {
+  color: #111827;
+}
+
+.brand-name, .navbar-brand, .logo, .display {
+  color: var(--green);
+}
+
+/* Shared top nav — logo left | links center | actions right */
+.navbar,
+.top-nav {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  flex-wrap: wrap !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  padding: 12px 22px !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 900 !important;
+}
+
+.navbar-brand,
+.logo,
+.brand-name {
+  color: var(--green) !important;
+  font-weight: 700 !important;
+  font-size: 28px !important;
+  flex-shrink: 0 !important;
+  min-width: 120px;
+}
+
+.nav-links {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  justify-content: center !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+  min-width: 0;
+}
+
+.nav-links a,
+.nav-links span {
+  border-radius: 999px !important;
+  font-weight: 600 !important;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.nav-links a:hover {
+  background: var(--green-light) !important;
+  color: var(--green) !important;
+}
+
+.nav-links a.active {
+  background: var(--green-light) !important;
+  color: var(--green) !important;
+  border: none !important;
+}
+
+.nav-actions,
+.nav-right {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+  margin-left: auto;
+}
+
+.night-btn {
+  background: transparent !important;
+  color: var(--text2) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 999px !important;
+  padding: 8px 14px !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  cursor: pointer;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.4em !important;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.night-btn:hover {
+  border-color: var(--green) !important;
+  color: var(--green) !important;
+  background: var(--green-light) !important;
+}
+
+.logout-btn,
+.logout {
+  background: transparent !important;
+  color: var(--red) !important;
+  border: 1px solid #E8C4C0 !important;
+  border-radius: 999px !important;
+  padding: 8px 14px !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  transition: background 0.18s ease, border-color 0.18s ease;
+  white-space: nowrap;
+}
+
+.logout-btn:hover,
+.logout:hover {
+  background: var(--red-light) !important;
+}
+
+/* Night mode — Tracking page only */
+body.tracking-page.night {
+  --bg: #0f1412;
+  --surface: #1a211e;
+  --ink: #e8f0ec;
+  --text: #e8f0ec;
+  --text2: #b7c7bf;
+  --text3: #8aa197;
+  --border: #2a3530;
+  --green-light: #16352c;
+  --gray-50: #1a211e;
+  --gray-100: #222b27;
+  background: var(--bg) !important;
+  color: var(--ink) !important;
+}
+
+body.tracking-page.night .navbar,
+body.tracking-page.night .top-nav {
+  background: rgba(19, 26, 23, 0.96) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+body.tracking-page.night .card,
+body.tracking-page.night .panel,
+body.tracking-page.night .stat-card,
+body.tracking-page.night .modal-content {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--ink) !important;
+}
+
+body.tracking-page.night .page-sub,
+body.tracking-page.night .help-text,
+body.tracking-page.night .stat-label {
+  color: var(--text3) !important;
+}
+
+body.tracking-page.night h1,
+body.tracking-page.night h2,
+body.tracking-page.night h3,
+body.tracking-page.night .page-title,
+body.tracking-page.night .page-header h1,
+body.tracking-page.night .page-header h2,
+body.tracking-page.night .header h1,
+body.tracking-page.night .header h2,
+body.tracking-page.night .card-title,
+body.tracking-page.night .section-title,
+body.tracking-page.night .modal-header h2,
+body.tracking-page.night .modal-header h3,
+body.tracking-page.night .modal-title {
+  color: var(--ink) !important;
+}
+
+body.tracking-page.night .page-header p,
+body.tracking-page.night .header p,
+body.tracking-page.night .sub,
+body.tracking-page.night .subtitle {
+  color: var(--text3) !important;
+}
+
+body.tracking-page.night .logo,
+body.tracking-page.night .navbar-brand,
+body.tracking-page.night .brand-name {
+  color: var(--green) !important;
+}
+
+body.tracking-page.night input:not([type="file"]),
+body.tracking-page.night select,
+body.tracking-page.night textarea {
+  background: #121816 !important;
+  color: var(--ink) !important;
+  border-color: var(--border) !important;
+}
+
+body.tracking-page.night .btn-outline,
+body.tracking-page.night .btn-secondary {
+  background: #222b27 !important;
+  color: #E1F5EE !important;
+  border: 1.5px solid #1D9E75 !important;
+}
+
+body.tracking-page.night .btn-outline:hover,
+body.tracking-page.night .btn-secondary:hover {
+  background: #16352c !important;
+  color: #fff !important;
+}
+
+body.tracking-page.night .btn-outline.btn-danger {
+  background: #2a1818 !important;
+  color: #fecaca !important;
+  border-color: #ef4444 !important;
+}
+
+/* Buttons */
+.btn-primary,
+.login-btn,
+button.primary,
+.btn.btn-primary,
+.refresh-btn {
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+  transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.btn-primary,
+.login-btn,
+button.primary,
+.btn.btn-primary {
+  background: var(--green) !important;
+}
+
+.btn-primary:hover,
+.login-btn:hover:not(:disabled),
+.refresh-btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary:hover,
+.login-btn:hover:not(:disabled) {
+  background: var(--green-dark) !important;
+  box-shadow: 0 8px 20px rgba(29, 158, 117, 0.28);
+}
+
+/* Cards / panels — shared spacing across farmer / buyer / admin */
+.card,
+.panel,
+.stat-card,
+.login-card,
+.modal-content,
+.auction-card,
+.listing-card,
+.watch-card {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow) !important;
+  background: var(--surface) !important;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.card,
+.panel,
+.stat-card,
+.auction-card,
+.listing-card,
+.watch-card {
+  padding: 20px 22px !important;
+}
+
+.stat-card:hover,
+.card:hover,
+.auction-card:hover,
+.listing-card:hover,
+.watch-card:hover {
+  box-shadow: 0 14px 36px rgba(15, 110, 86, 0.09) !important;
+}
+
+.page-body,
+.container,
+.main-content {
+  background: transparent;
+}
+
+/* Buyer / admin content shells (not map-heavy farmer tracking) */
+body:not(.tracking-page) > .container,
+.page-body {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+  box-sizing: border-box;
+}
+
+.btn,
+.btn-primary,
+.btn-secondary,
+.btn-outline,
+.refresh-btn,
+button.primary {
+  padding: 11px 18px !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  gap: 0.4em;
+}
+
+.btn-secondary,
+.btn-outline {
+  background: #F3F0E8 !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.btn-secondary:hover,
+.btn-outline:hover {
+  background: #E5E1D8 !important;
+}
+
+.page-title {
+  font-size: clamp(1.6rem, 2.4vw, 2rem) !important;
+  font-weight: 700 !important;
+  line-height: 1.15;
+}
+
+.page-sub {
+  color: var(--text3) !important;
+  line-height: 1.45;
+}
+
+.stat-value {
+  font-family: var(--display) !important;
+  color: var(--green) !important;
+  letter-spacing: -0.02em;
+}
+
+/* Form controls */
+.input-field,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+select.input-field {
+  border-radius: var(--radius-md) !important;
+  border-color: var(--border) !important;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.input-field:focus,
+input:not([type="file"]):not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus,
+select:focus {
+  border-color: var(--green) !important;
+  box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.15) !important;
+}
+
+input[type="file"] {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+
+/* Badges */
+.badge-farmer { background: var(--farmer-bg) !important; color: var(--farmer-ink) !important; }
+.badge-buyer { background: var(--buyer-bg) !important; color: var(--buyer-ink) !important; }
+
+/* Inline SVG icons */
+.ag-icon {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: -0.15em;
+  flex-shrink: 0;
+}
+
+.nav-links a,
+.navbar-brand,
+.logo {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.page-title,
+.card-title,
+.stat-label,
+.refresh-btn,
+.btn-primary,
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.alert-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alert-icon .ag-icon {
+  width: 1.15em;
+  height: 1.15em;
+}
+
+/* Soft page entrance for main content shells */
+.page-body,
+.main-content,
+.container.page {
+  animation: ag-rise 0.45s ease both;
+}
+
+@keyframes ag-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

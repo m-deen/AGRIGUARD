@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/agriguard-theme.css">
     <title>AgriGuard - Admin: User Management</title>
     <style>
         * {
@@ -12,8 +16,9 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
+            font-family: "Source Sans 3", system-ui, sans-serif;
+            background: #F7F4EE;
+            color: #163528;
         }
         
         .navbar {
@@ -55,28 +60,29 @@
         }
         
         .nav-links a:hover {
-            background: #f3f4f6;
+            background: #E1F5EE;
+            color: #1D9E75;
         }
         
         .nav-links a.active {
-            background: #1D9E75;
-            color: white;
-            border: 2px solid #0f6e56;
+            background: #E1F5EE;
+            color: #1D9E75;
+            border: none;
         }
         
         .logout-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
+            background: transparent;
+            color: #B42318;
+            border: 1px solid #E8C4C0;
             padding: 8px 18px;
-            border-radius: 8px;
+            border-radius: 999px;
             cursor: pointer;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 700;
         }
         
         .logout-btn:hover {
-            background: #dc2626;
+            background: #FCE8E6;
         }
         
         .container {
@@ -221,7 +227,26 @@
         }
         
         .btn-save:hover {
-            background: #0f6e56;
+            background: #0F6E56;
+        }
+
+        .btn-delete {
+            background: transparent;
+            color: #B42318;
+            border: 1px solid #E8C4C0;
+            margin-left: 8px;
+            font-weight: 600;
+        }
+
+        .btn-delete:hover {
+            background: #FCE8E6;
+        }
+
+        .actions-cell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
         }
         
         .toast {
@@ -353,7 +378,7 @@
             toast.textContent = message;
             toast.className = `toast ${isError ? 'error' : ''}`;
             toast.style.display = 'block';
-            setTimeout(() => toast.style.display = 'none', 3000);
+            setTimeout(() => toast.style.display = 'none', 8000);
         }
         
         function logout() {
@@ -445,8 +470,37 @@
             }
         }
         
+        async function deleteUser(userId, email) {
+            const me = getUser();
+            if (me && Number(me.user_id) === Number(userId)) {
+                showToast('You cannot delete your own account', true);
+                return;
+            }
+            const label = email || `user #${userId}`;
+            if (!confirm(`Delete ${label}?\n\nThis removes their animals, zones, and related records. This cannot be undone.`)) {
+                return;
+            }
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                });
+                const result = await response.json();
+                if (result.status === 'success' || result.success) {
+                    showToast(result.message || 'User deleted');
+                    fetchUsers();
+                } else {
+                    showToast(result.message || 'Could not delete user', true);
+                }
+            } catch (error) {
+                showToast('Network error', true);
+            }
+        }
+
         function renderUsers() {
             const container = document.getElementById('usersTable');
+            const me = getUser();
+            const myId = me ? Number(me.user_id) : null;
             
             if (users.length === 0) {
                 container.innerHTML = '<div style="text-align: center; padding: 40px;">No users found</div>';
@@ -467,7 +521,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        ${users.map(user => `
+                        ${users.map(user => {
+                            const isSelf = myId != null && Number(user.user_id) === myId;
+                            const safeEmail = String(user.email || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                            return `
                             <tr>
                                 <td>${user.user_id}</td>
                                 <td><strong>${user.full_name || user.first_name || 'N/A'}</strong></td>
@@ -476,14 +533,21 @@
                                 <td>${getStatusBadge(user.is_active)}</td>
                                 <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</td>
                                 <td>
-                                    <select id="roleSelect_${user.user_id}" onchange="updateRole(${user.user_id}, this.value)">
-                                        <option value="farmer" ${user.role === 'farmer' ? 'selected' : ''}>Farmer</option>
-                                        <option value="buyer" ${user.role === 'buyer' ? 'selected' : ''}>Buyer</option>
-                                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                                    </select>
+                                    <div class="actions-cell">
+                                        <select id="roleSelect_${user.user_id}" onchange="updateRole(${user.user_id}, this.value)">
+                                            <option value="farmer" ${user.role === 'farmer' ? 'selected' : ''}>Farmer</option>
+                                            <option value="buyer" ${user.role === 'buyer' ? 'selected' : ''}>Buyer</option>
+                                            <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                        </select>
+                                        <button type="button" class="btn-delete"
+                                            ${isSelf ? 'disabled title="Cannot delete yourself"' : ''}
+                                            onclick="deleteUser(${user.user_id}, '${safeEmail}')">
+                                            Delete
+                                        </button>
+                                    </div>
                                 </td>
-                            </tr>
-                        `).join('')}
+                            </tr>`;
+                        }).join('')}
                     </tbody>
                 </table>
             `;

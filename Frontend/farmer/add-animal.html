@@ -2,237 +2,325 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/agriguard-theme.css"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AgriGuard - Register New Animal</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #f5f5f5 0%, #e8ecef 100%);
+            font-family: "Source Sans 3", system-ui, sans-serif;
+            background: #F7F4EE;
             min-height: 100vh;
         }
-        
-        /* Navbar */
         .navbar {
-            background: white;
+            background: rgba(255,255,255,.94);
+            backdrop-filter: blur(10px);
             padding: 15px 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-bottom: 1px solid #E5E1D8;
             flex-wrap: wrap;
             gap: 15px;
             position: sticky;
             top: 0;
             z-index: 100;
         }
-        
         .logo {
             font-size: 22px;
-            font-weight: bold;
+            font-weight: 700;
             color: #1D9E75;
+            font-family: "Fraunces", Georgia, serif;
         }
-        
-        .nav-links {
-            display: flex;
-            gap: 5px;
-            flex-wrap: wrap;
-        }
-        
+        .nav-links { display: flex; gap: 5px; flex-wrap: wrap; }
         .nav-links a {
+            border-radius: 999px;
             text-decoration: none;
             color: #374151;
             padding: 8px 14px;
-            border-radius: 8px;
             font-size: 14px;
-            transition: all 0.2s;
+            font-weight: 600;
+            transition: background .18s ease, color .18s ease;
         }
-        
-        .nav-links a:hover {
-            background: #f3f4f6;
-        }
-        
+        .nav-links a:hover { background: #E1F5EE; color: #1D9E75; }
         .nav-links a.active {
-            background: #1D9E75;
-            color: white;
-            border: 2px solid #0f6e56;
-        }
-        
-        .logout-btn {
-            background: #ef4444;
-            color: white;
+            background: #E1F5EE;
+            color: #1D9E75;
             border: none;
+            border-radius: 999px;
+        }
+        .logout-btn {
+            background: transparent;
+            color: #B42318;
+            border: 1px solid #E8C4C0;
             padding: 8px 18px;
-            border-radius: 8px;
+            border-radius: 999px;
             cursor: pointer;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 700;
         }
-        
-        .logout-btn:hover {
-            background: #dc2626;
-        }
-        
-        /* Container */
+        .logout-btn:hover { background: #FCE8E6; }
+
         .container {
-            max-width: 900px;
+            max-width: 980px;
             margin: 0 auto;
             padding: 30px;
         }
-        
-        /* Card */
-        .card {
-            background: white;
-            border-radius: 16px;
-            padding: 35px;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
-        
-        .card-header {
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #e5e7eb;
-        }
-        
-        .card-header h1 {
+        .header h1 {
             font-size: 28px;
             color: #111827;
             display: flex;
             align-items: center;
             gap: 10px;
+            font-family: "Fraunces", Georgia, serif;
         }
-        
-        .card-header p {
+        .header p {
             color: #6b7280;
+            margin-top: 5px;
             font-size: 14px;
-            margin-top: 8px;
         }
-        
-        /* Form */
-        .form-group {
-            margin-bottom: 22px;
+        .card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 24px 26px 28px;
+            border: 1px solid #E5E1D8;
+            box-shadow: 0 10px 30px rgba(15,110,86,.06);
         }
-        
+
+        .section {
+            margin-bottom: 28px;
+            padding-bottom: 8px;
+        }
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: "Fraunces", Georgia, serif;
+            font-size: 18px;
+            color: #1D9E75;
+            margin-bottom: 16px;
+            letter-spacing: -.01em;
+        }
+        .section-title span {
+            display: inline-flex;
+            width: 28px; height: 28px;
+            border-radius: 9px;
+            background: #E1F5EE;
+            color: #1D9E75;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            font-family: "Source Sans 3", system-ui, sans-serif;
+        }
+
+        .species-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .species-card {
+            border: 1.5px solid #E5E1D8;
+            background: #FCFAF6;
+            border-radius: 16px;
+            padding: 18px 14px;
+            cursor: pointer;
+            text-align: center;
+            transition: border-color .18s ease, background .18s ease, transform .18s ease, box-shadow .18s ease;
+        }
+        .species-card:hover {
+            border-color: #1D9E75;
+            transform: translateY(-3px);
+            box-shadow: 0 12px 26px rgba(29,158,117,.14);
+        }
+        .species-card.active {
+            border-color: #1D9E75;
+            background: #E1F5EE;
+            box-shadow: 0 14px 30px rgba(29,158,117,.2);
+            transform: translateY(-2px);
+        }
+        .species-card .icon-wrap {
+            width: 48px; height: 48px;
+            margin: 0 auto 10px;
+            border-radius: 14px;
+            background: #fff;
+            border: 1px solid #E5E1D8;
+            display: grid;
+            place-items: center;
+            color: #1D9E75;
+        }
+        .species-card.active .icon-wrap {
+            background: linear-gradient(145deg, #1D9E75, #0F6E56);
+            color: #fff;
+            border-color: transparent;
+        }
+        .species-card strong {
+            display: block;
+            font-size: 15px;
+            color: #163528;
+            margin-bottom: 2px;
+        }
+        .species-card small { color: #6b7280; font-size: 12px; }
+        #species { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; }
+
+        .form-group { margin-bottom: 18px; }
         .form-group label {
             display: block;
             margin-bottom: 8px;
-            font-weight: 600;
-            color: #374151;
-            font-size: 14px;
+            font-weight: 700;
+            color: #163528;
+            font-size: 13px;
         }
-        
-        .form-group label .required {
-            color: #ef4444;
-        }
-        
+        .form-group label .required { color: #B42318; }
         .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
             padding: 12px 14px;
-            border: 1px solid #d1d5db;
-            border-radius: 10px;
+            border: 1px solid #E5E1D8;
+            border-radius: 12px;
             font-size: 14px;
-            transition: all 0.2s;
-            background: white;
+            font-family: inherit;
+            transition: border-color .18s ease, box-shadow .18s ease;
+            background: #fff;
+            color: #163528;
         }
-        
         .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
             outline: none;
             border-color: #1D9E75;
-            box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.1);
+            box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.15);
         }
-        
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 16px;
         }
-        
-        /* Photo Upload */
+        .help-text {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 6px;
+        }
+
         .photo-upload {
-            border: 2px dashed #d1d5db;
-            border-radius: 12px;
-            padding: 30px;
+            border: 1.5px dashed #A7D7C5;
+            border-radius: 16px;
+            padding: 28px 20px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s;
-            background: #f9fafb;
+            transition: all .2s ease;
+            background: linear-gradient(180deg, #FBF9F4, #F3F8F5);
+            color: #6b7280;
         }
-        
         .photo-upload:hover {
             border-color: #1D9E75;
-            background: #f0fdf4;
+            background: #E1F5EE;
+            color: #0F6E56;
         }
-        
+        .photo-upload .upload-icon {
+            width: 44px; height: 44px;
+            margin: 0 auto 10px;
+            border-radius: 12px;
+            background: #fff;
+            border: 1px solid #E5E1D8;
+            display: grid;
+            place-items: center;
+            color: #1D9E75;
+        }
+        .photo-upload strong {
+            display: block;
+            color: #163528;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
         .photo-preview {
-            max-width: 200px;
-            max-height: 200px;
-            margin-top: 15px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            max-width: 220px;
+            max-height: 220px;
+            margin: 14px auto 0;
+            border-radius: 14px;
+            box-shadow: 0 10px 24px rgba(15,110,86,.15);
+            display: block;
         }
-        
-        /* Buttons */
+
         .btn {
-            padding: 12px 24px;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
+            padding: 13px 22px;
+            border-radius: 999px;
+            font-size: 15px;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all .18s ease;
             border: none;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: .4em;
         }
-        
         .btn-primary {
-            background: #1D9E75;
+            background: linear-gradient(180deg, #22a87d, #1D9E75);
             color: white;
-            width: 100%;
+            box-shadow: 0 10px 22px rgba(29,158,117,.28);
         }
-        
         .btn-primary:hover:not(:disabled) {
-            background: #0f6e56;
+            filter: brightness(1.03);
             transform: translateY(-1px);
         }
-        
-        .btn-primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         .btn-secondary {
-            background: #f3f4f6;
+            background: #F3F0E8;
             color: #374151;
+            border: 1px solid #E5E1D8;
         }
-        
-        .btn-secondary:hover {
-            background: #e5e7eb;
+        .btn-secondary:hover { background: #E5E1D8; }
+        .draft-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-top: 8px;
+            padding: 12px 14px;
+            background: #E1F5EE;
+            border: 1px solid #A7D7C5;
+            border-radius: 12px;
+            font-size: 13px;
+            color: #0F6E56;
+            font-weight: 600;
         }
-        
+        .draft-chip {
+            border: 1px solid #A7D7C5;
+            background: #E1F5EE;
+            color: #0F6E56;
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .draft-chip:hover { background: #d4f0e4; }
         .form-actions {
             display: flex;
-            gap: 15px;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
+            gap: 12px;
+            margin-top: 10px;
+            padding-top: 22px;
+            border-top: 1px solid #E5E1D8;
         }
-        
-        .form-actions .btn-secondary {
-            flex: 0.3;
-        }
-        
-        .form-actions .btn-primary {
-            flex: 0.7;
-        }
-        
-        /* Toast */
+        .form-actions .btn-secondary { flex: 0.32; }
+        .form-actions .btn-primary { flex: 0.68; }
+
         .toast {
             position: fixed;
             bottom: 30px;
@@ -240,156 +328,184 @@
             background: #1D9E75;
             color: white;
             padding: 14px 24px;
-            border-radius: 10px;
+            border-radius: 12px;
             display: none;
             z-index: 1000;
-            font-weight: 500;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-weight: 600;
+            box-shadow: 0 10px 28px rgba(0,0,0,.18);
         }
-        
-        .toast.error {
-            background: #ef4444;
-        }
-        
-        /* Help Text */
-        .help-text {
-            font-size: 12px;
-            color: #6b7280;
-            margin-top: 5px;
-        }
-        
-        /* Responsive */
+        .toast.error { background: #B42318; }
+
         @media (max-width: 768px) {
-            .form-row {
-                grid-template-columns: 1fr;
-                gap: 0;
-            }
-            .container {
-                padding: 15px;
-            }
-            .card {
-                padding: 20px;
-            }
-            .nav-links {
-                justify-content: center;
-            }
-            .form-actions {
-                flex-direction: column;
-            }
+            .form-row, .species-grid { grid-template-columns: 1fr; }
+            .container { padding: 15px; }
+            .card { padding: 20px; }
+            .nav-links { justify-content: center; }
+            .form-actions { flex-direction: column; }
             .form-actions .btn-secondary,
-            .form-actions .btn-primary {
-                flex: 1;
-            }
+            .form-actions .btn-primary { flex: 1; }
         }
     </style>
 </head>
 <body>
     <div class="navbar">
-        <div class="logo">🌾 AgriGuard</div>
-        <div class="nav-links">
-            <a href="dashboard.html">📊 Dashboard</a>
-            <a href="animals.html">🐄 My Animals</a>
-            <a href="add-animal.html" class="active">➕ Add Animal</a>
-            <a href="vaccinations.html">💉 Vaccinations</a>
-            <a href="health.html">🏥 Health</a>
-            <a href="tracking.html">📍 Tracking</a>
-            <a href="auctions.html">💰 Auctions</a>
-            <a href="chat-bot.html">🤖 AI Chat</a>
-        </div>
-        <button class="logout-btn" onclick="logout()">Logout</button>
-    </div>
-
-    <div class="container">
-        <div class="card">
-            <div class="card-header">
-                <h1>➕ Register New Animal</h1>
-                <p>Add livestock to your farm inventory. Fields marked with <span class="required">*</span> are required.</p>
+  <div class="logo"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> AgriGuard</div>
+  <div class="nav-links">
+    <a href="dashboard.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Dashboard</a>
+    <a href="animals.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 18c-3 0-5-2-5-5 0-2 1-3 2-4-.5-2 1-4 3-4s3.5 2 3 4c1 1 2 2 2 4 0 3-2 5-5 5z"/><path d="M8 10c-1.5-.5-3 0-3.5 1.5M16 10c1.5-.5 3 0 3.5 1.5M10 19v2M14 19v2"/></svg> My Animals</a>
+    <a href="breed-id.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v6a3 3 0 003 3h4a3 3 0 003-3V4M7 20v-6a3 3 0 013-3h4a3 3 0 013 3v6M9 4h.01M15 4h.01M9 20h.01M15 20h.01"/></svg> Breed ID</a>
+    <a href="add-animal.html" class="active"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add Animals</a>
+    <a href="tracking.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg> Tracking</a>
+    <a href="health.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2 4 4 0 017 2c0 5.5-7 10-7 10z"/></svg> Health</a>
+    <a href="vaccinations.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3l7 7M11 6l7 7M4 14l6 6M3 21l4-1 9-9-3-3-9 9-1 4z"/></svg> Vaccination</a>
+    <a href="auctions.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14l-4 4M14 4l6 6M4.5 16.5L9 12l7-7 3 3-7 7-4.5 4.5zM13 19h8"/></svg> Auction</a>
+    <a href="chat-bot.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 01-8 8H7l-4 3v-5a8 8 0 118-6z"/></svg> AI Chat</a>
+  </div>
+  <div class="nav-actions">
+    <button type="button" class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</div>
+<div class="container">
+        <div class="header">
+            <div>
+                <h1><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Register New Animal</h1>
+                <p>Capture identity, breed, and purchase details for tracking, health, and auctions.</p>
             </div>
+        </div>
 
+        <div class="card">
             <form id="addAnimalForm">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Ear Tag ID <span class="required">*</span></label>
-                        <input type="text" id="animalTag" required placeholder="e.g., AG-001 or ZA-LP-001">
-                        <div class="help-text">Unique identifier for your animal</div>
+                <div class="section">
+                    <div class="section-title"><span>1</span> Species</div>
+                    <div class="species-grid" id="speciesGrid">
+                        <button type="button" class="species-card" data-species="Cattle">
+                            <div class="icon-wrap">
+                                <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="11" r="5"/><path d="M5 8l2 2M19 8l-2 2M8 18v2M16 18v2M9 7C7 5 5 5 4 6M15 7c2-2 4-2 5-1"/></svg>
+                            </div>
+                            <strong>Cattle</strong>
+                            <small>Beef & dairy</small>
+                        </button>
+                        <button type="button" class="species-card" data-species="Goat">
+                            <div class="icon-wrap">
+                                <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14c-2.5 0-4-1.5-4-3.5S10 7 12 7s4 1.5 4 3.5S14.5 14 12 14z"/><path d="M8 8L5 4M16 8l3-4M10 18v2M14 18v2"/></svg>
+                            </div>
+                            <strong>Goat</strong>
+                            <small>Boer & local</small>
+                        </button>
+                        <button type="button" class="species-card" data-species="Sheep">
+                            <div class="icon-wrap">
+                                <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><circle cx="7" cy="11" r="2"/><circle cx="17" cy="11" r="2"/><circle cx="9" cy="16" r="2"/><circle cx="15" cy="16" r="2"/><path d="M10 8V6M14 8V6"/></svg>
+                            </div>
+                            <strong>Sheep</strong>
+                            <small>Dorper & wool</small>
+                        </button>
                     </div>
-                    <div class="form-group">
-                        <label>Species <span class="required">*</span></label>
-                        <select id="species" required>
-                            <option value="">Select species</option>
-                            <option value="Cattle">🐄 Cattle</option>
-                            <option value="Goat">🐐 Goat</option>
-                            <option value="Sheep">🐑 Sheep</option>
-                        </select>
+                    <select id="species" required aria-label="Species">
+                        <option value="">Select species</option>
+                        <option value="Cattle">Cattle</option>
+                        <option value="Goat">Goat</option>
+                        <option value="Sheep">Sheep</option>
+                    </select>
+                    <div class="help-text">Tap a card to choose the animal type *</div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title"><span>2</span> Identity</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Ear Tag ID <span class="required">*</span></label>
+                            <input type="text" id="animalTag" required placeholder="e.g., AG-001 or ZA-LP-001">
+                            <div class="help-text">Unique identifier for your animal</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="breed">Breed</label>
+                            <select id="breed" aria-label="Breed">
+                                <option value="">Select breed</option>
+                            </select>
+                            <div class="help-text" id="breedHelp">Select a breed — this can auto-set the species</div>
+                            <button type="button" class="draft-chip" id="useLastBreedBtn" style="display:none;margin-top:8px">Use last Breed ID result</button>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Gender</label>
+                            <select id="gender">
+                                <option value="">Select</option>
+                                <option value="Male">Male (Bull / Ram / Buck)</option>
+                                <option value="Female">Female (Cow / Ewe / Doe)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Color / Markings</label>
+                            <input type="text" id="colorMarkings" placeholder="e.g., Black with white patch on forehead">
+                            <div class="help-text">Distinctive features for easy ID</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Breed</label>
-                        <input type="text" id="breed" placeholder="e.g., Nguni, Angus, Boer Goat">
-                        <div class="help-text">Optional - helps with breed identification</div>
-                    </div>
-                    <div class="form-group">
-                        <label>Gender</label>
-                        <select id="gender">
-                            <option value="">Select</option>
-                            <option value="Male">♂ Male (Bull/Ram/Buck)</option>
-                            <option value="Female">♀ Female (Cow/Ewe/Doe)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Date of Birth</label>
-                        <input type="date" id="dateOfBirth">
-                        <div class="help-text">Helps track age and vaccination schedule</div>
-                    </div>
-                    <div class="form-group">
-                        <label>Weight (kg)</label>
-                        <input type="number" id="weight" step="0.01" placeholder="e.g., 450">
-                        <div class="help-text">Current weight in kilograms</div>
+                <div class="section">
+                    <div class="section-title"><span>3</span> Health snapshot</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Date of Birth</label>
+                            <input type="date" id="dateOfBirth" max="">
+                            <div class="help-text">Cannot be a future date</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Weight (kg)</label>
+                            <input type="number" id="weight" step="0.01" min="0" placeholder="e.g., 450">
+                            <div class="help-text">Current weight in kilograms (0 or more)</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Color / Markings</label>
-                    <input type="text" id="colorMarkings" placeholder="e.g., Black with white patch on forehead">
-                    <div class="help-text">Distinctive features for easy identification</div>
+                <div class="section">
+                    <div class="section-title"><span>4</span> Acquisition</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Purchase Price (R)</label>
+                            <input type="number" id="purchasePrice" step="0.01" min="0" placeholder="e.g., 8500">
+                            <div class="help-text">Amount paid when acquired (cannot be negative)</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Purchase Date</label>
+                            <input type="date" id="purchaseDate" max="">
+                            <div class="help-text">Cannot be a future date</div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-row">
+                <div class="section">
+                    <div class="section-title"><span>5</span> Photo & notes</div>
                     <div class="form-group">
-                        <label>Purchase Price (R)</label>
-                        <input type="number" id="purchasePrice" step="0.01" placeholder="e.g., 8500">
-                        <div class="help-text">Amount paid when acquired</div>
+                        <label>Animal Photo</label>
+                        <div class="photo-upload" id="photoDrop" onclick="document.getElementById('photoInput').click()">
+                            <div class="upload-icon">
+                                <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
+                            </div>
+                            <strong>Click or drop a photo here</strong>
+                            <div class="help-text">JPEG or PNG, max 5MB</div>
+                            <input type="file" id="photoInput" accept="image/jpeg,image/png" style="display: none;">
+                        </div>
+                        <img id="photoPreview" class="photo-preview" style="display: none;" alt="Animal preview">
                     </div>
                     <div class="form-group">
-                        <label>Purchase Date</label>
-                        <input type="date" id="purchaseDate">
-                        <div class="help-text">When you acquired this animal</div>
+                        <label>Additional Notes</label>
+                        <textarea id="notes" rows="3" placeholder="Health history, temperament, parentage, or any other important information..."></textarea>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>📸 Animal Photo</label>
-                    <div class="photo-upload" onclick="document.getElementById('photoInput').click()">
-                        📤 Click or drag to upload photo
-                        <div class="help-text" style="margin-top: 8px;">JPEG or PNG, max 5MB</div>
-                        <input type="file" id="photoInput" accept="image/jpeg,image/png" style="display: none;">
-                    </div>
-                    <img id="photoPreview" class="photo-preview" style="display: none;">
-                </div>
-
-                <div class="form-group">
-                    <label>📝 Additional Notes</label>
-                    <textarea id="notes" rows="3" placeholder="Health history, temperament, parentage, or any other important information..."></textarea>
+                <div class="draft-bar">
+                    <span id="draftStatus">Draft autosaves while you type</span>
+                    <button type="button" class="btn btn-secondary" id="clearDraftBtn" style="padding:8px 14px;font-size:13px">Clear draft</button>
                 </div>
 
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="goBack()">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="submitBtn">✓ Register Animal</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+                        Register Animal
+                    </button>
                 </div>
             </form>
         </div>
@@ -414,9 +530,7 @@
             toast.textContent = message;
             toast.className = `toast ${type}`;
             toast.style.display = 'block';
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, 3000);
+            setTimeout(() => { toast.style.display = 'none'; }, 8000);
         }
         
         function logout() {
@@ -464,10 +578,29 @@
             }
         });
         
+        function todayISODate() {
+            const d = new Date();
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function applyDateMaxToday() {
+            const today = todayISODate();
+            ['dateOfBirth', 'purchaseDate'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.max = today;
+            });
+        }
+
         // Form validation
         function validateForm() {
             const animalTag = document.getElementById('animalTag').value.trim();
             const species = document.getElementById('species').value;
+            const dob = document.getElementById('dateOfBirth').value;
+            const purchaseDate = document.getElementById('purchaseDate').value;
+            const today = todayISODate();
             
             if (!animalTag) {
                 showToast('Please enter an Ear Tag ID', 'error');
@@ -477,8 +610,33 @@
                 showToast('Please select a species', 'error');
                 return false;
             }
+            if (dob && dob > today) {
+                showToast('Date of birth cannot be in the future', 'error');
+                return false;
+            }
+            if (purchaseDate && purchaseDate > today) {
+                showToast('Purchase date cannot be in the future', 'error');
+                return false;
+            }
+            if (dob && purchaseDate && purchaseDate < dob) {
+                showToast('Purchase date cannot be before date of birth', 'error');
+                return false;
+            }
+
+            const weightRaw = document.getElementById('weight').value;
+            const priceRaw = document.getElementById('purchasePrice').value;
+            if (weightRaw !== '' && Number(weightRaw) < 0) {
+                showToast('Weight cannot be negative', 'error');
+                return false;
+            }
+            if (priceRaw !== '' && Number(priceRaw) < 0) {
+                showToast('Purchase price cannot be negative', 'error');
+                return false;
+            }
             return true;
         }
+
+        applyDateMaxToday();
         
         // Submit form
         document.getElementById('addAnimalForm').addEventListener('submit', async function(e) {
@@ -487,9 +645,9 @@
             if (!validateForm()) return;
             
             const submitBtn = document.getElementById('submitBtn');
-            const originalText = submitBtn.textContent;
+            const originalHTML = submitBtn.innerHTML;
             submitBtn.disabled = true;
-            submitBtn.textContent = '⏳ Registering...';
+            submitBtn.textContent = 'Registering...';
             
             const animalData = {
                 animal_tag: document.getElementById('animalTag').value.trim().toUpperCase(),
@@ -517,28 +675,284 @@
                 const result = await response.json();
                 
                 if (result.status === 'success' || result.success === true) {
-                    showToast('✅ Animal registered successfully! Redirecting...', 'success');
+                    clearDraft(true);
+                    showToast('Animal registered successfully! Redirecting...', 'success');
                     setTimeout(() => {
                         window.location.href = 'animals.html';
                     }, 1500);
                 } else {
                     showToast(result.message || 'Error registering animal', 'error');
                     submitBtn.disabled = false;
-                    submitBtn.textContent = originalText;
+                    submitBtn.innerHTML = originalHTML;
                 }
             } catch (error) {
                 console.error('Error:', error);
                 showToast('Network error. Make sure Flask is running on port 5000', 'error');
                 submitBtn.disabled = false;
-                submitBtn.textContent = originalText;
+                submitBtn.innerHTML = originalHTML;
             }
         });
         
+
+        const DRAFT_KEY = 'agriguard_animal_draft';
+        const speciesSelect = document.getElementById('species');
+        const breedSelect = document.getElementById('breed');
+        const draftStatus = document.getElementById('draftStatus');
+
+        // Keep breedInput alias so older draft helpers stay simple
+        const breedInput = breedSelect;
+
+        const BREED_SPECIES = {
+            // Cattle
+            'Afrikaner': 'Cattle',
+            'Angus': 'Cattle',
+            'Bonsmara': 'Cattle',
+            'Brahman': 'Cattle',
+            'Drakensberger': 'Cattle',
+            'Hereford': 'Cattle',
+            'Nguni': 'Cattle',
+            'Simmentaler': 'Cattle',
+            // Goat
+            'Boer Goat': 'Goat',
+            'Kalahari Red': 'Goat',
+            'Savanna': 'Goat',
+            'Indigenous Veld Goat': 'Goat',
+            // Sheep
+            'Damara': 'Sheep',
+            'Dorper': 'Sheep',
+            'Merino': 'Sheep',
+            'Meatmaster': 'Sheep',
+            'Van Rooy': 'Sheep'
+        };
+
+        function normalizeBreed(name) {
+            return (name || '').trim().toLowerCase();
+        }
+
+        function speciesFromBreed(breed) {
+            const exact = Object.keys(BREED_SPECIES).find(k => normalizeBreed(k) === normalizeBreed(breed));
+            return exact ? BREED_SPECIES[exact] : '';
+        }
+
+        function ensureBreedOption(breed) {
+            if (!breed) return;
+            const exists = [...breedSelect.options].some(o => o.value === breed);
+            if (!exists) {
+                const opt = document.createElement('option');
+                opt.value = breed;
+                opt.textContent = breed;
+                breedSelect.appendChild(opt);
+                BREED_SPECIES[breed] = BREED_SPECIES[breed] || speciesSelect.value || '';
+            }
+        }
+
+        function populateBreedSelect(preferredBreed = '') {
+            const current = preferredBreed || breedSelect.value;
+            const species = speciesSelect.value;
+            const groups = { Cattle: [], Goat: [], Sheep: [] };
+            Object.entries(BREED_SPECIES).forEach(([breed, sp]) => {
+                if (!groups[sp]) return;
+                if (species && sp !== species) return;
+                groups[sp].push(breed);
+            });
+
+            let html = '<option value="">Select breed</option>';
+            Object.entries(groups).forEach(([sp, breeds]) => {
+                if (!breeds.length) return;
+                breeds.sort((a, b) => a.localeCompare(b));
+                html += `<optgroup label="${sp}">`;
+                breeds.forEach(b => {
+                    html += `<option value="${b}">${b}</option>`;
+                });
+                html += '</optgroup>';
+            });
+            breedSelect.innerHTML = html;
+            if (current) {
+                ensureBreedOption(current);
+                breedSelect.value = current;
+            }
+        }
+
+        function selectSpecies(species, keepBreed = false) {
+            if (!species) return;
+            const prevBreed = breedSelect.value;
+            speciesSelect.value = species;
+            document.querySelectorAll('.species-card').forEach(c => {
+                c.classList.toggle('active', c.dataset.species === species);
+            });
+            populateBreedSelect(keepBreed ? prevBreed : '');
+            if (keepBreed && prevBreed && speciesFromBreed(prevBreed) && speciesFromBreed(prevBreed) !== species) {
+                breedSelect.value = '';
+            } else if (keepBreed) {
+                breedSelect.value = prevBreed;
+            }
+        }
+
+        function applyBreed(breed, speciesHint) {
+            if (!breed) return;
+            const species = speciesHint || speciesFromBreed(breed);
+            if (species) selectSpecies(species, true);
+            ensureBreedOption(breed);
+            breedSelect.value = breed;
+            saveDraft();
+        }
+
+        document.querySelectorAll('.species-card').forEach(card => {
+            card.addEventListener('click', () => {
+                selectSpecies(card.dataset.species);
+                saveDraft();
+            });
+        });
+
+        breedSelect.addEventListener('change', () => {
+            const species = speciesFromBreed(breedSelect.value);
+            if (species) selectSpecies(species, true);
+            saveDraft();
+        });
+
+        async function loadBreedSuggestions() {
+            try {
+                const r = await fetch(`${API_BASE}/api/breed/supported`, {
+                    headers: { Authorization: `Bearer ${getToken()}` }
+                });
+                const d = await r.json();
+                if ((d.status === 'success' || d.success) && Array.isArray(d.data)) {
+                    d.data.forEach(x => {
+                        if (x.breed_name && x.species) BREED_SPECIES[x.breed_name] = x.species;
+                    });
+                }
+            } catch (_) {}
+            populateBreedSelect();
+        }
+
+        function collectDraft() {
+            return {
+                animalTag: document.getElementById('animalTag').value,
+                species: speciesSelect.value,
+                breed: breedInput.value,
+                gender: document.getElementById('gender').value,
+                dateOfBirth: document.getElementById('dateOfBirth').value,
+                weight: document.getElementById('weight').value,
+                colorMarkings: document.getElementById('colorMarkings').value,
+                purchasePrice: document.getElementById('purchasePrice').value,
+                purchaseDate: document.getElementById('purchaseDate').value,
+                notes: document.getElementById('notes').value,
+                savedAt: Date.now()
+            };
+        }
+
+        function saveDraft() {
+            try {
+                localStorage.setItem(DRAFT_KEY, JSON.stringify(collectDraft()));
+                draftStatus.textContent = 'Draft saved locally';
+            } catch (_) {
+                draftStatus.textContent = 'Could not save draft';
+            }
+        }
+
+        function clearDraft(silent) {
+            localStorage.removeItem(DRAFT_KEY);
+            if (!silent) {
+                draftStatus.textContent = 'Draft cleared';
+                showToast('Draft cleared');
+            }
+        }
+
+        function restoreDraft() {
+            try {
+                const raw = localStorage.getItem(DRAFT_KEY);
+                if (!raw) return;
+                const d = JSON.parse(raw);
+                if (d.animalTag) document.getElementById('animalTag').value = d.animalTag;
+                if (d.gender) document.getElementById('gender').value = d.gender;
+                if (d.dateOfBirth) document.getElementById('dateOfBirth').value = d.dateOfBirth;
+                if (d.weight) document.getElementById('weight').value = d.weight;
+                if (d.colorMarkings) document.getElementById('colorMarkings').value = d.colorMarkings;
+                if (d.purchasePrice) document.getElementById('purchasePrice').value = d.purchasePrice;
+                if (d.purchaseDate) document.getElementById('purchaseDate').value = d.purchaseDate;
+                if (d.notes) document.getElementById('notes').value = d.notes;
+                if (d.species) selectSpecies(d.species, true);
+                else if (d.breed) {
+                    const s = speciesFromBreed(d.breed);
+                    if (s) selectSpecies(s, true);
+                } else {
+                    populateBreedSelect();
+                }
+                if (d.breed) {
+                    ensureBreedOption(d.breed);
+                    breedSelect.value = d.breed;
+                }
+                draftStatus.textContent = 'Draft restored';
+            } catch (_) {}
+        }
+
+        ['animalTag','gender','dateOfBirth','weight','colorMarkings','purchasePrice','purchaseDate','notes']
+            .forEach(id => {
+                document.getElementById(id)?.addEventListener('input', saveDraft);
+                document.getElementById(id)?.addEventListener('change', saveDraft);
+            });
+
+        document.getElementById('clearDraftBtn')?.addEventListener('click', () => {
+            document.getElementById('addAnimalForm').reset();
+            document.querySelectorAll('.species-card').forEach(c => c.classList.remove('active'));
+            speciesSelect.value = '';
+            populateBreedSelect();
+            clearDraft(false);
+        });
+
+        const useLastBreedBtn = document.getElementById('useLastBreedBtn');
+        try {
+            const last = JSON.parse(localStorage.getItem('agriguard_last_breed') || 'null');
+            if (last?.breed && Date.now() - (last.at || 0) < 1000 * 60 * 60 * 24 * 7) {
+                useLastBreedBtn.style.display = 'inline-flex';
+                useLastBreedBtn.textContent = `Use Breed ID: ${last.breed}`;
+                useLastBreedBtn.addEventListener('click', () => applyBreed(last.breed, last.species));
+            }
+        } catch (_) {}
+
+        function applyBreedIdFromQuery() {
+            const params = new URLSearchParams(window.location.search);
+            const breed = (params.get('breed') || '').trim();
+            const species = (params.get('species') || '').trim();
+            if (!breed && !species) return false;
+            applyBreed(breed, species);
+            const help = document.getElementById('breedHelp');
+            if (help && breed) {
+                help.textContent = `Pre-filled from Breed ID (${breed}). Add tag and other details to save.`;
+            }
+            showToast(`Breed filled from ID: ${breed || species}`);
+            try {
+                const url = new URL(window.location.href);
+                url.search = '';
+                window.history.replaceState({}, '', url.pathname);
+            } catch (_) {}
+            return true;
+        }
+
+        // Drag & drop photo
+        const drop = document.getElementById('photoDrop');
+        const photoInput = document.getElementById('photoInput');
+        ;['dragenter','dragover'].forEach(evt => {
+            drop.addEventListener(evt, e => { e.preventDefault(); drop.style.borderColor = '#1D9E75'; });
+        });
+        ;['dragleave','drop'].forEach(evt => {
+            drop.addEventListener(evt, e => { e.preventDefault(); drop.style.borderColor = ''; });
+        });
+        drop.addEventListener('drop', e => {
+            const file = e.dataTransfer.files?.[0];
+            if (!file) return;
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            photoInput.files = dt.files;
+            photoInput.dispatchEvent(new Event('change'));
+        });
+
         // Initialize
         requireLogin();
-        
-        // Set default date of birth (optional - can remove)
-        // document.getElementById('dateOfBirth').valueAsDate = new Date();
+        loadBreedSuggestions().finally(() => {
+            restoreDraft();
+            applyBreedIdFromQuery();
+        });
     </script>
 </body>
 </html>

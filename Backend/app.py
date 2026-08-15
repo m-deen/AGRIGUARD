@@ -1,7 +1,7 @@
 # ============================================
 # 1. IMPORTS FIRST
 # ============================================
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect
 from flask_cors import CORS
 from dotenv import load_dotenv
 import psycopg2
@@ -9,15 +9,14 @@ from psycopg2.extras import RealDictCursor
 import bcrypt
 import os
 import jwt
+import json
 import random
 import math
 import secrets
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone, date
 from functools import wraps
 from services.notification_services import NotificationService #For sending Email alerts#
+from services.chat_service import chat_service
 
 # Load environment variables
 load_dotenv()
@@ -30,6 +29,9 @@ CORS(app, origins=["*"])
 notification_service = NotificationService()
 
 JWT_SECRET = os.getenv('JWT_SECRET', 'agriguard-secret-key-2024')
+FRONTEND_BASE_URL = os.getenv(
+    'FRONTEND_BASE_URL', 'http://127.0.0.1:5500/Frontend'
+).rstrip('/')
 
 # ============================================
 # 2. DATABASE CONNECTION
@@ -48,6 +50,91 @@ def get_db():
         print(f'Database connection error: {e}')
         return None
 
+
+def ensure_animals_date_of_birth(conn):
+    """Backfill NULL date_of_birth values so Age can display."""
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = 'animals' AND column_name = 'date_of_birth'
+            LIMIT 1
+        """)
+        if not cur.fetchone():
+            print('ensure_animals_date_of_birth: column missing (skipping ALTER; needs DB owner)')
+            cur.close()
+            return
+        # Existing rows often have no DOB — give a stable estimated birth date
+        cur.execute("""
+            UPDATE animals
+            SET date_of_birth = (CURRENT_DATE - (MOD(COALESCE(animal_id, 1), 5) + 1) * INTERVAL '1 year')
+                                - (MOD(COALESCE(animal_id, 1), 8) * INTERVAL '1 month')
+            WHERE date_of_birth IS NULL
+        """)
+        conn.commit()
+        cur.close()
+    except Exception as e:
+        conn.rollback()
+        print(f'ensure_animals_date_of_birth: {e}')
+
+
+def ensure_vaccinations_schema(conn):
+    """Best-effort add missing vaccinations columns (ignored if not table owner)."""
+    try:
+        cur = conn.cursor()
+        needed = {
+            'notes': 'TEXT',
+            'manufacturer': 'VARCHAR(120)',
+            'batch_number': 'VARCHAR(80)',
+            'vet_name': 'VARCHAR(120)',
+            'dosage_ml': 'NUMERIC(10,2)',
+            'completed_date': 'DATE',
+            'is_completed': 'BOOLEAN DEFAULT FALSE',
+            'due_date': 'DATE',
+            'vaccination_date': 'DATE',
+        }
+        for col, coltype in needed.items():
+            cur.execute("""
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'vaccinations'
+                  AND column_name = %s
+                LIMIT 1
+            """, (col,))
+            if cur.fetchone():
+                continue
+            try:
+                cur.execute(f'ALTER TABLE vaccinations ADD COLUMN {col} {coltype}')
+                conn.commit()
+                print(f'ensure_vaccinations_schema: added vaccinations.{col}')
+            except Exception as e:
+                conn.rollback()
+                print(f'ensure_vaccinations_schema: skip {col}: {e}')
+        cur.close()
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        print(f'ensure_vaccinations_schema: {e}')
+
+
+def vaccinations_has_column(conn, column_name):
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'vaccinations'
+          AND column_name = %s
+        LIMIT 1
+    """, (column_name,))
+    ok = bool(cur.fetchone())
+    cur.close()
+    return ok
+
 # ============================================
 # 3. HELPER FUNCTIONS
 # ============================================
@@ -58,6 +145,24 @@ def make_token(user_id, role):
         'exp': datetime.utcnow() + timedelta(hours=24)
     }
     return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
+
+
+def make_email_verify_token(user_id, email, hours=24):
+    """Signed one-time-style token for email verification (no extra DB columns)."""
+    payload = {
+        'user_id': user_id,
+        'email': email,
+        'purpose': 'email_verify',
+        'exp': datetime.utcnow() + timedelta(hours=hours),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
+
+
+def decode_email_verify_token(token):
+    payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+    if payload.get('purpose') != 'email_verify':
+        raise jwt.InvalidTokenError('Wrong token purpose')
+    return payload
 
 
 def calculate_distance(lat1, lon1, lat2, lon2):
@@ -72,6 +177,568 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     a = (math.sin(dphi / 2) ** 2
          + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2)
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+# Polygon storage capability (detected once — avoids aborting DB transactions)
+_GEOFENCE_HAS_POLYGON_COL = None   # True/False/None(unknown)
+_GEOFENCE_HAS_POLYGON_TBL = None
+
+
+def _conn_rollback(conn_or_cursor):
+    """Rollback safely after a failed statement so later commands can run."""
+    try:
+        conn = getattr(conn_or_cursor, 'connection', None) or conn_or_cursor
+        conn.rollback()
+    except Exception:
+        pass
+
+
+def ensure_geofences_schema(conn):
+    """
+    Prefer geofences.polygon_json for polygon corners.
+    Do not CREATE geofence_polygons — app DB user usually cannot create tables.
+    Local JSON file remains a fallback only if polygon_json is missing.
+    """
+    global _GEOFENCE_HAS_POLYGON_COL, _GEOFENCE_HAS_POLYGON_TBL
+    try:
+        cur = conn.cursor()
+        if _GEOFENCE_HAS_POLYGON_COL is None:
+            cur.execute("""
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'geofences'
+                  AND column_name = 'polygon_json'
+                LIMIT 1
+            """)
+            if cur.fetchone():
+                _GEOFENCE_HAS_POLYGON_COL = True
+                print('ensure_geofences_schema: using geofences.polygon_json')
+            else:
+                try:
+                    cur.execute('ALTER TABLE geofences ADD COLUMN polygon_json TEXT')
+                    conn.commit()
+                    _GEOFENCE_HAS_POLYGON_COL = True
+                    print('ensure_geofences_schema: added geofences.polygon_json')
+                except Exception as e:
+                    _conn_rollback(conn)
+                    _GEOFENCE_HAS_POLYGON_COL = False
+                    print(f'ensure_geofences_schema: skip geofences.polygon_json: {e}')
+                    print(
+                        '→ To store polygons IN geofences, run this in pgAdmin as postgres:\n'
+                        '   ALTER TABLE geofences ADD COLUMN IF NOT EXISTS polygon_json TEXT;'
+                    )
+
+        # Side table not needed when polygon_json exists; never auto-CREATE it
+        if _GEOFENCE_HAS_POLYGON_COL:
+            _GEOFENCE_HAS_POLYGON_TBL = False
+        elif _GEOFENCE_HAS_POLYGON_TBL is None:
+            cur.execute("""
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                  AND table_name = 'geofence_polygons'
+                LIMIT 1
+            """)
+            _GEOFENCE_HAS_POLYGON_TBL = cur.fetchone() is not None
+        cur.close()
+    except Exception as e:
+        _conn_rollback(conn)
+        print(f'ensure_geofences_schema: {e}')
+
+    try:
+        os.makedirs(_geofence_polygon_dir(), exist_ok=True)
+    except Exception as e:
+        print(f'ensure_geofences_schema local dir: {e}')
+
+
+def _geofence_polygon_dir():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'geofence_polygons')
+
+
+def _geofence_polygon_path(user_id, geofence_id=None):
+    name = f'user_{int(user_id)}.json'
+    return os.path.join(_geofence_polygon_dir(), name)
+
+
+def geofences_has_polygon_column(conn):
+    global _GEOFENCE_HAS_POLYGON_COL
+    if _GEOFENCE_HAS_POLYGON_COL is not None:
+        return _GEOFENCE_HAS_POLYGON_COL
+    ensure_geofences_schema(conn)
+    return bool(_GEOFENCE_HAS_POLYGON_COL)
+
+
+def _load_polygon_file(user_id):
+    """Return polygon JSON string/list from local file, or None."""
+    path = _geofence_polygon_path(user_id)
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            raw = data.get('polygon_json') or data.get('polygon')
+            if raw is None:
+                return None
+            if isinstance(raw, str):
+                return raw
+            return json.dumps(raw)
+        if isinstance(data, list):
+            return json.dumps(data)
+        return None
+    except Exception as e:
+        print(f'_load_polygon_file: {e}')
+        return None
+
+
+def _save_polygon_file(user_id, geofence_id, polygon_json):
+    os.makedirs(_geofence_polygon_dir(), exist_ok=True)
+    path = _geofence_polygon_path(user_id)
+    if not polygon_json:
+        try:
+            if os.path.isfile(path):
+                os.remove(path)
+        except Exception as e:
+            print(f'_save_polygon_file remove: {e}')
+        return
+    payload = {
+        'user_id': int(user_id),
+        'geofence_id': int(geofence_id) if geofence_id is not None else None,
+        'polygon_json': polygon_json,
+        'updated_at': datetime.now().isoformat(timespec='seconds'),
+    }
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(payload, f)
+
+
+def save_geofence_polygon(cursor, geofence_id, user_id, polygon_json, has_column):
+    """
+    Persist polygon corners.
+    Never issues a full connection rollback — that used to undo the geofences
+    UPDATE/INSERT that just succeeded. Optional DB writes use SAVEPOINTs.
+    Local JSON file is the reliable store when DB DDL is blocked.
+    """
+    global _GEOFENCE_HAS_POLYGON_COL, _GEOFENCE_HAS_POLYGON_TBL
+    saved = False
+
+    def _sp_run(label, fn):
+        nonlocal saved
+        try:
+            cursor.execute(f"SAVEPOINT {label}")
+            fn()
+            cursor.execute(f"RELEASE SAVEPOINT {label}")
+            saved = True
+            return True
+        except Exception as e:
+            try:
+                cursor.execute(f"ROLLBACK TO SAVEPOINT {label}")
+            except Exception:
+                pass
+            print(f'save_geofence_polygon {label} skipped: {e}')
+            return False
+
+    if has_column and polygon_json is not None:
+        ok = _sp_run('gf_poly_col', lambda: cursor.execute(
+            "UPDATE geofences SET polygon_json=%s WHERE geofence_id=%s AND user_id=%s",
+            (polygon_json, geofence_id, user_id)
+        ))
+        if not ok:
+            _GEOFENCE_HAS_POLYGON_COL = False
+    elif has_column and polygon_json is None:
+        ok = _sp_run('gf_poly_col_clear', lambda: cursor.execute(
+            "UPDATE geofences SET polygon_json=NULL WHERE geofence_id=%s AND user_id=%s",
+            (geofence_id, user_id)
+        ))
+        if not ok:
+            _GEOFENCE_HAS_POLYGON_COL = False
+
+    if _GEOFENCE_HAS_POLYGON_TBL:
+        def _side():
+            if polygon_json:
+                cursor.execute("""
+                    INSERT INTO geofence_polygons (geofence_id, user_id, polygon_json, updated_at)
+                    VALUES (%s, %s, %s, NOW())
+                    ON CONFLICT (geofence_id) DO UPDATE
+                      SET polygon_json = EXCLUDED.polygon_json,
+                          user_id = EXCLUDED.user_id,
+                          updated_at = NOW()
+                """, (geofence_id, user_id, polygon_json))
+            else:
+                cursor.execute(
+                    "DELETE FROM geofence_polygons WHERE geofence_id=%s AND user_id=%s",
+                    (geofence_id, user_id)
+                )
+        if not _sp_run('gf_poly_tbl', _side):
+            _GEOFENCE_HAS_POLYGON_TBL = False
+
+    # Local file always works without DB privileges
+    try:
+        _save_polygon_file(user_id, geofence_id, polygon_json)
+        saved = True
+    except Exception as e:
+        print(f'save_geofence_polygon file: {e}')
+
+    return saved
+
+
+def migrate_polygon_file_into_row(cursor, user_id, geofence_id):
+    """If DB column is empty but local file has polygon, copy it into geofences."""
+    global _GEOFENCE_HAS_POLYGON_COL
+    if not _GEOFENCE_HAS_POLYGON_COL or not geofence_id:
+        return False
+    raw = _load_polygon_file(user_id)
+    pts = normalize_polygon_points(raw)
+    if not pts:
+        return False
+    polygon_json = json.dumps([{'lat': lat, 'lng': lon} for lat, lon in pts])
+    try:
+        cursor.execute("SAVEPOINT gf_poly_migrate")
+        cursor.execute("""
+            UPDATE geofences
+            SET polygon_json = %s
+            WHERE geofence_id = %s AND user_id = %s
+              AND (polygon_json IS NULL OR polygon_json = '' OR polygon_json = 'null')
+        """, (polygon_json, geofence_id, user_id))
+        cursor.execute("RELEASE SAVEPOINT gf_poly_migrate")
+        print(f'[geofence] migrated polygon file → geofences.polygon_json id={geofence_id}')
+        return True
+    except Exception as e:
+        try:
+            cursor.execute("ROLLBACK TO SAVEPOINT gf_poly_migrate")
+        except Exception:
+            pass
+        print(f'migrate_polygon_file_into_row: {e}')
+        return False
+
+
+def attach_geofence_polygon(cursor, gf, user_id=None):
+    """Fill polygon_json on a geofence row from column, side table, or local file."""
+    global _GEOFENCE_HAS_POLYGON_TBL
+    if not gf:
+        return gf
+    row = dict(gf) if not isinstance(gf, dict) else gf
+
+    if normalize_polygon_points(row.get('polygon_json')):
+        return row
+
+    gid = row.get('geofence_id')
+    uid = user_id or row.get('user_id')
+
+    if cursor is not None and gid is not None and _GEOFENCE_HAS_POLYGON_TBL:
+        try:
+            cursor.execute("SAVEPOINT gf_poly_attach")
+            if uid is not None:
+                cursor.execute("""
+                    SELECT polygon_json FROM geofence_polygons
+                    WHERE geofence_id=%s AND user_id=%s
+                """, (gid, uid))
+            else:
+                cursor.execute("""
+                    SELECT polygon_json FROM geofence_polygons
+                    WHERE geofence_id=%s
+                """, (gid,))
+            side = cursor.fetchone()
+            cursor.execute("RELEASE SAVEPOINT gf_poly_attach")
+            if side:
+                raw = side['polygon_json'] if isinstance(side, dict) else side[0]
+                if normalize_polygon_points(raw):
+                    row['polygon_json'] = raw
+                    return row
+        except Exception as e:
+            try:
+                cursor.execute("ROLLBACK TO SAVEPOINT gf_poly_attach")
+            except Exception:
+                _conn_rollback(cursor)
+            _GEOFENCE_HAS_POLYGON_TBL = False
+            print(f'attach_geofence_polygon side table: {e}')
+
+    if uid is not None:
+        raw = _load_polygon_file(uid)
+        if normalize_polygon_points(raw):
+            row['polygon_json'] = raw
+            # Opportunistically copy file → geofences.polygon_json when column exists
+            if cursor is not None and gid is not None and _GEOFENCE_HAS_POLYGON_COL:
+                migrate_polygon_file_into_row(cursor, uid, gid)
+    return row
+
+
+def fetch_user_geofence(cursor, user_id):
+    """Latest geofence for user, with polygon from column / side table / file."""
+    global _GEOFENCE_HAS_POLYGON_COL
+    if _GEOFENCE_HAS_POLYGON_COL:
+        try:
+            cursor.execute("""
+                SELECT geofence_id, center_latitude, center_longitude, radius_meters,
+                       polygon_json, fence_name, is_active, created_at
+                FROM geofences WHERE user_id=%s
+                ORDER BY created_at DESC LIMIT 1
+            """, (user_id,))
+            gf = cursor.fetchone()
+        except Exception as e:
+            _conn_rollback(cursor)
+            _GEOFENCE_HAS_POLYGON_COL = False
+            print(f'fetch_user_geofence polygon select fallback: {e}')
+            cursor.execute("""
+                SELECT geofence_id, center_latitude, center_longitude, radius_meters,
+                       fence_name, is_active, created_at
+                FROM geofences WHERE user_id=%s
+                ORDER BY created_at DESC LIMIT 1
+            """, (user_id,))
+            gf = cursor.fetchone()
+    else:
+        cursor.execute("""
+            SELECT geofence_id, center_latitude, center_longitude, radius_meters,
+                   fence_name, is_active, created_at
+            FROM geofences WHERE user_id=%s
+            ORDER BY created_at DESC LIMIT 1
+        """, (user_id,))
+        gf = cursor.fetchone()
+
+    if not gf:
+        return None
+    return attach_geofence_polygon(cursor, dict(gf), user_id)
+
+
+def normalize_polygon_points(raw):
+    """Accept [{lat,lng}|{latitude,longitude}|[lat,lng], ...] → [(lat, lon), ...]."""
+    if not raw:
+        return None
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except Exception:
+            return None
+    if not isinstance(raw, (list, tuple)):
+        return None
+    pts = []
+    for p in raw:
+        lat = lon = None
+        if isinstance(p, dict):
+            lat = p.get('lat', p.get('latitude'))
+            lon = p.get('lng', p.get('lon', p.get('longitude')))
+        elif isinstance(p, (list, tuple)) and len(p) >= 2:
+            lat, lon = p[0], p[1]
+        try:
+            lat_f, lon_f = float(lat), float(lon)
+        except (TypeError, ValueError):
+            continue
+        if not (-90 <= lat_f <= 90 and -180 <= lon_f <= 180):
+            continue
+        pts.append((lat_f, lon_f))
+    if len(pts) < 3:
+        return None
+    # Drop duplicate closing vertex if client sent a closed ring
+    if pts[0][0] == pts[-1][0] and pts[0][1] == pts[-1][1]:
+        pts = pts[:-1]
+    return pts if len(pts) >= 3 else None
+
+
+def geofence_polygon(gf):
+    """Polygon vertices for a geofence row, or None (circle-only legacy)."""
+    if not gf:
+        return None
+    return normalize_polygon_points(gf.get('polygon_json') or gf.get('polygon'))
+
+
+def point_in_polygon(lat, lon, polygon):
+    """Ray casting. polygon = [(lat, lon), ...]."""
+    if not polygon or len(polygon) < 3:
+        return False
+    inside = False
+    n = len(polygon)
+    j = n - 1
+    for i in range(n):
+        lat_i, lon_i = polygon[i]
+        lat_j, lon_j = polygon[j]
+        if ((lat_i > lat) != (lat_j > lat)) and (
+            lon < (lon_j - lon_i) * (lat - lat_i) / ((lat_j - lat_i) or 1e-15) + lon_i
+        ):
+            inside = not inside
+        j = i
+    return inside
+
+
+def polygon_centroid(polygon):
+    lats = [p[0] for p in polygon]
+    lons = [p[1] for p in polygon]
+    return sum(lats) / len(lats), sum(lons) / len(lons)
+
+
+def polygon_bounding_radius(polygon, clat=None, clon=None):
+    if not polygon:
+        return 0.0
+    if clat is None or clon is None:
+        clat, clon = polygon_centroid(polygon)
+    return max(calculate_distance(clat, clon, lat, lon) for lat, lon in polygon)
+
+
+def is_inside_farm(lat, lon, gf, circle_margin=1.0):
+    """True if point is inside farm fence (polygon preferred, else circle)."""
+    if not gf:
+        return True
+    poly = geofence_polygon(gf)
+    if poly:
+        return point_in_polygon(lat, lon, poly)
+    farm_lat = float(gf['center_latitude'])
+    farm_lon = float(gf['center_longitude'])
+    radius = float(gf['radius_meters'] or 0)
+    return calculate_distance(lat, lon, farm_lat, farm_lon) <= radius * circle_margin
+
+
+def farm_geometry(gf):
+    """
+    Normalised farm geometry for tracking logic.
+    Returns dict: lat, lon, radius, polygon (or None), gf row.
+    """
+    default = {
+        'lat': -23.8966, 'lon': 29.4488, 'radius': 2000.0,
+        'polygon': None, 'gf': None
+    }
+    if not gf:
+        return default
+    poly = geofence_polygon(gf)
+    try:
+        lat = float(gf['center_latitude'])
+        lon = float(gf['center_longitude'])
+        radius = float(gf['radius_meters'] or 2000.0)
+    except (TypeError, ValueError, KeyError):
+        if poly:
+            lat, lon = polygon_centroid(poly)
+            radius = max(100.0, polygon_bounding_radius(poly, lat, lon))
+        else:
+            return default
+    if poly and (not gf.get('center_latitude') or not gf.get('radius_meters')):
+        lat, lon = polygon_centroid(poly)
+        radius = max(100.0, polygon_bounding_radius(poly, lat, lon))
+    return {'lat': lat, 'lon': lon, 'radius': radius, 'polygon': poly, 'gf': gf}
+
+
+def random_point_in_geofence(gf, max_fraction=0.85, max_tries=50):
+    """Random GPS point clearly inside the farm fence."""
+    geo = farm_geometry(gf)
+    poly = geo['polygon']
+    if poly:
+        lats = [p[0] for p in poly]
+        lons = [p[1] for p in poly]
+        min_lat, max_lat = min(lats), max(lats)
+        min_lon, max_lon = min(lons), max(lons)
+        # Shrink bbox slightly so samples sit away from edges
+        pad_lat = (max_lat - min_lat) * (1 - max_fraction) * 0.5
+        pad_lon = (max_lon - min_lon) * (1 - max_fraction) * 0.5
+        for _ in range(max_tries):
+            lat = random.uniform(min_lat + pad_lat, max_lat - pad_lat)
+            lon = random.uniform(min_lon + pad_lon, max_lon - pad_lon)
+            if point_in_polygon(lat, lon, poly):
+                return lat, lon
+        return polygon_centroid(poly)
+
+    farm_lat, farm_lon, radius = geo['lat'], geo['lon'], geo['radius']
+    ang = random.uniform(0, 2 * math.pi)
+    d = random.uniform(0, radius * max_fraction)
+    lat = farm_lat + (d / 111320) * math.cos(ang)
+    lon = farm_lon + (d / (111320 * math.cos(math.radians(farm_lat)))) * math.sin(ang)
+    return lat, lon
+
+
+def random_point_outside_geofence(gf):
+    """Place a point clearly outside the farm fence (geofence breach demo)."""
+    geo = farm_geometry(gf)
+    farm_lat, farm_lon, radius = geo['lat'], geo['lon'], geo['radius']
+    poly = geo['polygon']
+    for _ in range(30):
+        ang = random.uniform(0, 2 * math.pi)
+        d = radius * random.uniform(1.2, 1.7)
+        lat = farm_lat + (d / 111320) * math.cos(ang)
+        lon = farm_lon + (d / (111320 * math.cos(math.radians(farm_lat)))) * math.sin(ang)
+        if poly:
+            if not point_in_polygon(lat, lon, poly):
+                return lat, lon
+        else:
+            return lat, lon
+    ang = random.uniform(0, 2 * math.pi)
+    d = radius * 1.5
+    lat = farm_lat + (d / 111320) * math.cos(ang)
+    lon = farm_lon + (d / (111320 * math.cos(math.radians(farm_lat)))) * math.sin(ang)
+    return lat, lon
+
+
+def zone_fits_in_farm(zlat, zlon, zrad, gf):
+    """
+    Zone centre must be inside fence; zone circle should not spill outside.
+    Returns (ok: bool, message: str|None, max_radius_hint: int|None).
+    """
+    if not gf:
+        return False, 'Draw a farm geofence first, then create zones inside it', None
+
+    poly = geofence_polygon(gf)
+    if poly:
+        if not point_in_polygon(zlat, zlon, poly):
+            return False, 'Zone centre must be inside the farm geofence', None
+        # Sample circumference — if any sample leaves the polygon, zone is too big
+        for i in range(16):
+            ang = 2 * math.pi * i / 16
+            tlat = zlat + (zrad / 111320) * math.cos(ang)
+            tlon = zlon + (zrad / (111320 * math.cos(math.radians(zlat)))) * math.sin(ang)
+            if not point_in_polygon(tlat, tlon, poly):
+                # Binary-search a safe radius hint
+                lo, hi = 50.0, float(zrad)
+                best = 50
+                for _ in range(10):
+                    mid = (lo + hi) / 2
+                    ok = True
+                    for j in range(12):
+                        a = 2 * math.pi * j / 12
+                        plat = zlat + (mid / 111320) * math.cos(a)
+                        plon = zlon + (mid / (111320 * math.cos(math.radians(zlat)))) * math.sin(a)
+                        if not point_in_polygon(plat, plon, poly):
+                            ok = False
+                            break
+                    if ok:
+                        best = int(mid)
+                        lo = mid
+                    else:
+                        hi = mid
+                return False, (
+                    f'Zone too large for this spot — use radius ≤ {best}m '
+                    f'to stay inside the fence'
+                ), best
+        return True, None, None
+
+    gflat = float(gf['center_latitude'])
+    gflon = float(gf['center_longitude'])
+    gfrad = float(gf['radius_meters'])
+    dist = calculate_distance(zlat, zlon, gflat, gflon)
+    if dist > gfrad:
+        return False, 'Zone centre must be inside the farm geofence', None
+    if dist + zrad > gfrad:
+        max_r = max(50, int(gfrad - dist))
+        return False, (
+            f'Zone too large for this spot — use radius ≤ {max_r}m to stay inside geofence'
+        ), max_r
+    return True, None, None
+
+
+def serialize_geofence_row(g):
+    """Floats + parsed polygon list for API responses."""
+    if g.get('created_at'):
+        g['created_at'] = str(g['created_at'])
+    for key in ('center_latitude', 'center_longitude', 'radius_meters'):
+        if g.get(key) is not None:
+            try:
+                g[key] = float(g[key])
+            except (TypeError, ValueError):
+                pass
+    poly = normalize_polygon_points(g.get('polygon_json'))
+    if poly:
+        g['polygon'] = [{'lat': lat, 'lng': lon} for lat, lon in poly]
+    else:
+        g['polygon'] = None
+    # Don't force clients to parse the raw column
+    if 'polygon_json' in g:
+        del g['polygon_json']
+    return g
+
 
 def handle_anomaly(animal_tag, anomaly_type, location, farmer_email, severity="High", details="Immediate attention required"):
     """
@@ -100,35 +767,16 @@ def handle_anomaly(animal_tag, anomaly_type, location, farmer_email, severity="H
         )
         
         if result:
-            print(f"✅ Alert sent to farmer for animal {animal_tag}")
-            # You can also log this to database if you want
-            # log_anomaly_to_database(animal_tag, anomaly_type, location, farmer_email, severity)
+            print(f"[OK] Alert sent to farmer for animal {animal_tag}")
         else:
-            print(f"❌ Failed to send alert for animal {animal_tag}")
+            print(f"[FAIL] Failed to send alert for animal {animal_tag}")
         
         return result
         
     except Exception as e:
-        print(f"❌ Error in handle_anomaly: {e}")
+        print(f"[ERROR] Error in handle_anomaly: {e}")
         return False
 
-def log_anomaly_to_database(animal_tag, anomaly_type, location, farmer_email, severity):
-    """Optional: Log anomaly to database for tracking"""
-    try:
-        conn = get_db()
-        if conn:
-            cur = conn.cursor()
-            cur.execute("""
-                INSERT INTO anomalies (animal_tag, anomaly_type, location, farmer_email, severity, detected_at)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (animal_tag, anomaly_type, location, farmer_email, severity, datetime.now()))
-            conn.commit()
-            cur.close()
-            conn.close()
-            return True
-    except Exception as e:
-        print(f"Database log error: {e}")
-        return False
 # ============================================
 # 4. ROLE DECORATOR
 # ============================================
@@ -167,9 +815,8 @@ def token_required(f):
         try:
             payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
             request.user_id = payload['user_id']
-            request.user_role = payload['role']
-            # THIS IS IMPORTANT - pass user_id to the function
-            return f(request.user_id, *args, **kwargs)
+            request.user_role = payload.get('role', '')
+            return f(*args, **kwargs)
         except Exception as e:
             return jsonify({'status': 'error', 'message': f'Invalid token: {str(e)}'}), 401
     return decorated
@@ -180,22 +827,22 @@ class FallbackDetector:
     """
     Rule-only detector — used when scikit-learn / Isolation Forest is unavailable.
     Priority order mirrors AnomalyDetector.predict():
-      P1 Geofence Breach → P2 High Speed → P3 Night Movement
-    Night window: 18:00 – 03:59  (matches NIGHT_START=18, NIGHT_END=4)
+      P1 Geofence Breach → P2 High Speed → P3 Night Movement (night + out of zone)
     """
-    SPEED_THRESHOLD = 15
+    SPEED_THRESHOLD = 8
     NIGHT_START     = 18   # inclusive
     NIGHT_END       = 4    # exclusive upper bound of night (i.e. hour < 4)
 
-    def predict(self, speed, hour, distance, geofence_radius=2000):
+    def predict(self, speed, hour, distance, geofence_radius=2000, outside_zone=False):
         # P1 — outside fence (10 % buffer)
         if geofence_radius and distance > geofence_radius * 1.1:
             return {'is_anomaly': True,  'anomaly_type': 'Geofence Breach',  'score': 0}
         # P2 — too fast
         if speed > self.SPEED_THRESHOLD:
             return {'is_anomaly': True,  'anomaly_type': 'High Speed',        'score': 0}
-        # P3 — night window (18:00–03:59)
-        if hour >= self.NIGHT_START or hour < self.NIGHT_END:
+        # P3 — night AND outside assigned zone
+        is_night = hour >= self.NIGHT_START or hour < self.NIGHT_END
+        if is_night and outside_zone:
             return {'is_anomaly': True,  'anomaly_type': 'Night Movement',    'score': 0}
         return     {'is_anomaly': False, 'anomaly_type': None,                'score': 0}
 
@@ -205,9 +852,9 @@ try:
     from ml.anomaly_detector import AnomalyDetector
     anomaly_detector = AnomalyDetector()
     anomaly_detector.train()
-    print("✅ Anomaly detector (Isolation Forest) loaded successfully")
+    print("[OK] Anomaly detector (Isolation Forest) loaded successfully")
 except Exception as e:
-    print(f"⚠️  Anomaly detector error — using rule-only fallback: {e}")
+    print(f"[WARN] Anomaly detector error - using rule-only fallback: {e}")
     anomaly_detector = FallbackDetector()
 
 # ============================================
@@ -243,6 +890,7 @@ def health_check():
         'status': 'healthy',
         'timestamp': datetime.now().isoformat()
     })
+
 # ============================================
 # 8. AUTH ROUTES
 # ============================================
@@ -282,6 +930,20 @@ def login():
             return jsonify({'status': 'error', 'success': False,
                             'message': 'Invalid credentials'}), 401
 
+        # New accounts must verify email before signing in
+        if user.get('is_verified') is False:
+            cursor.close(); conn.close()
+            return jsonify({
+                'status': 'error',
+                'success': False,
+                'code': 'EMAIL_NOT_VERIFIED',
+                'message': (
+                    'Please verify your email before signing in. '
+                    'Check your inbox for the AgriGuard verification link.'
+                ),
+                'email': user['email'],
+            }), 403
+
         cursor.execute(
             "UPDATE users SET last_login_at = NOW() WHERE user_id = %s", (user['user_id'],)
         )
@@ -314,6 +976,8 @@ def login():
 
 @app.route('/api/register', methods=['POST'])
 def register():
+    import re
+
     data       = request.get_json() or {}
     email      = (data.get('email')      or '').strip().lower()
     password   = (data.get('password')   or '').strip()
@@ -331,6 +995,41 @@ def register():
         return jsonify({'status': 'error', 'success': False,
                         'message': 'Password must be at least 8 characters'}), 400
 
+    # First / last name: letters (and single spaces) only — no digits / special characters
+    if not re.fullmatch(r"[A-Za-z]+(?: [A-Za-z]+)*", first_name) or not (2 <= len(first_name) <= 50):
+        return jsonify({
+            'status': 'error', 'success': False,
+            'message': 'First name must contain only letters (no numbers or special characters).',
+        }), 400
+    if not re.fullmatch(r"[A-Za-z]+(?: [A-Za-z]+)*", last_name) or not (2 <= len(last_name) <= 50):
+        return jsonify({
+            'status': 'error', 'success': False,
+            'message': 'Last name must contain only letters (no numbers or special characters).',
+        }), 400
+
+    # Registration only allows selected email domains
+    ALLOWED_EMAIL_DOMAINS = {
+        'gmail.com',
+        'yahoo.com',
+        'myturf.ul.ac.za',
+        'ul.ac.za',
+        'outlook.com',
+    }
+    if '@' not in email:
+        return jsonify({'status': 'error', 'success': False,
+                        'message': 'Please enter a valid email address.'}), 400
+
+    local_part, domain = email.rsplit('@', 1)
+    domain = (domain or '').lower()
+    if not local_part or domain not in ALLOWED_EMAIL_DOMAINS:
+        return jsonify({
+            'status': 'error', 'success': False,
+            'message': (
+                'Email must use @gmail.com, @yahoo.com, @outlook.com, '
+                '@ul.ac.za, or @myturf.ul.ac.za'
+            ),
+        }), 400
+    
     password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     conn = get_db()
     if not conn:
@@ -340,23 +1039,185 @@ def register():
         cursor    = conn.cursor()
         full_name = f"{first_name} {last_name}"
         cursor.execute("""
-            INSERT INTO users (email, password_hash, first_name, last_name, full_name,
-                               role, phone, farm_name, location)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING user_id
+            INSERT INTO users (
+                email, password_hash, first_name, last_name, full_name,
+                role, phone, farm_name, location, is_verified
+            )
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s, FALSE)
+            RETURNING user_id
         """, (email, password_hash, first_name, last_name, full_name,
               role, phone, farm_name, location))
         user_id = cursor.fetchone()[0]
-        conn.commit(); cursor.close(); conn.close()
-        return jsonify({
-            'status': 'success', 'success': True,
-            'message': 'Account created successfully! You can now login.',
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        verify_token = make_email_verify_token(user_id, email, hours=24)
+        verify_link = f"{FRONTEND_BASE_URL}/verify-email.html?token={verify_token}"
+        print(f"Email verify link for {email}: {verify_link}")
+
+        email_sent = False
+        try:
+            email_sent = bool(
+                notification_service.send_email_verification(
+                    email, verify_link, first_name=first_name, expires_hours=24
+                )
+            )
+        except Exception as mail_err:
+            print(f'Verification email failed: {mail_err}')
+
+        payload = {
+            'status': 'success',
+            'success': True,
             'user_id': user_id,
-        }), 201
+            'requires_verification': True,
+            'email_sent': email_sent,
+            'message': (
+                f'Account created. We sent a verification link to {email}. '
+                'Please verify your email before signing in.'
+                if email_sent else
+                'Account created, but the verification email could not be sent. '
+                'Use the verification link below (valid 24 hours).'
+            ),
+        }
+        if not email_sent:
+            payload['verify_link'] = verify_link
+        return jsonify(payload), 201
     except psycopg2.IntegrityError:
         return jsonify({'status': 'error', 'success': False,
                         'message': 'Email already exists'}), 409
     except Exception as e:
         print(f'Register error: {e}')
+        return jsonify({'status': 'error', 'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/verify-email', methods=['POST', 'GET'])
+def verify_email():
+    """Confirm account email using the signed token from the verification email."""
+    from urllib.parse import unquote
+
+    if request.method == 'GET':
+        token = unquote((request.args.get('token') or '').strip())
+    else:
+        data = request.get_json(silent=True) or {}
+        token = unquote((data.get('token') or request.args.get('token') or '').strip())
+
+    if not token:
+        return jsonify({'status': 'error', 'success': False,
+                        'message': 'Verification token required'}), 400
+
+    try:
+        payload = decode_email_verify_token(token)
+    except jwt.ExpiredSignatureError:
+        return jsonify({
+            'status': 'error', 'success': False,
+            'message': 'Verification link expired. Please request a new one.',
+        }), 400
+    except Exception:
+        return jsonify({
+            'status': 'error', 'success': False,
+            'message': 'Invalid verification link. Please request a new one.',
+        }), 400
+
+    user_id = payload.get('user_id')
+    email = (payload.get('email') or '').strip().lower()
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'status': 'error', 'success': False, 'message': 'Database error'}), 500
+
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(
+            "SELECT user_id, email, is_verified FROM users WHERE user_id = %s AND email = %s",
+            (user_id, email),
+        )
+        user = cursor.fetchone()
+        if not user:
+            cursor.close(); conn.close()
+            return jsonify({
+                'status': 'error', 'success': False,
+                'message': 'Account not found for this verification link.',
+            }), 404
+
+        if user.get('is_verified'):
+            cursor.close(); conn.close()
+            return jsonify({
+                'status': 'success', 'success': True,
+                'message': 'Email already verified. You can sign in.',
+                'email': user['email'],
+            })
+
+        cursor.execute(
+            "UPDATE users SET is_verified = TRUE WHERE user_id = %s",
+            (user['user_id'],),
+        )
+        conn.commit()
+        cursor.close(); conn.close()
+        return jsonify({
+            'status': 'success',
+            'success': True,
+            'message': 'Email verified successfully. You can now sign in.',
+            'email': user['email'],
+        })
+    except Exception as e:
+        print(f'Verify email error: {e}')
+        return jsonify({'status': 'error', 'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/resend-verification', methods=['POST'])
+def resend_verification():
+    """Resend verification email for an unverified account."""
+    data = request.get_json() or {}
+    email = (data.get('email') or '').strip().lower()
+    if not email:
+        return jsonify({'status': 'error', 'success': False, 'message': 'Email required'}), 400
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'status': 'error', 'success': False, 'message': 'Database error'}), 500
+
+    generic = {
+        'status': 'success',
+        'success': True,
+        'message': 'If an unverified account exists for that email, a new link was sent.',
+    }
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(
+            "SELECT user_id, email, first_name, is_verified FROM users WHERE email = %s",
+            (email,),
+        )
+        user = cursor.fetchone()
+        cursor.close(); conn.close()
+        if not user or user.get('is_verified'):
+            return jsonify(generic)
+
+        verify_token = make_email_verify_token(user['user_id'], user['email'], hours=24)
+        verify_link = f"{FRONTEND_BASE_URL}/verify-email.html?token={verify_token}"
+        print(f"Resend verify link for {email}: {verify_link}")
+        email_sent = False
+        try:
+            email_sent = bool(
+                notification_service.send_email_verification(
+                    email, verify_link,
+                    first_name=user.get('first_name') or '',
+                    expires_hours=24,
+                )
+            )
+        except Exception as mail_err:
+            print(f'Resend verification email failed: {mail_err}')
+
+        payload = dict(generic)
+        payload['email_sent'] = email_sent
+        if not email_sent:
+            payload['verify_link'] = verify_link
+            payload['message'] = (
+                'Could not send email. Use this verification link (valid 24 hours).'
+            )
+        return jsonify(payload)
+    except Exception as e:
+        print(f'Resend verification error: {e}')
         return jsonify({'status': 'error', 'success': False, 'message': str(e)}), 500
 
 
@@ -395,28 +1256,65 @@ def forgot_password():
     if not conn:
         return jsonify({'status': 'error', 'message': 'Database error'}), 500
 
+    # Live Server frontend path (reset-password.html lives next to login.html)
+    frontend_base = os.getenv(
+        'FRONTEND_BASE_URL', 'http://127.0.0.1:5500/Frontend'
+    ).rstrip('/')
+
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT user_id, email FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
-        if user:
-            reset_token = secrets.token_urlsafe(32)
-            expires     = datetime.utcnow() + timedelta(hours=1)
-            cursor.execute("""
-                UPDATE users SET reset_token=%s, reset_expires=%s WHERE user_id=%s
-            """, (reset_token, expires, user[0]))
-            conn.commit()
-            reset_link = f"http://localhost:5000/reset-password.html?token={reset_token}"
-            print(f"Password reset link for {email}: {reset_link}")
-            return jsonify({
-                'status': 'success', 'success': True,
-                'message': f'Password reset link sent to {email}',
-                'reset_link': reset_link,
-            })
-        return jsonify({
-            'status': 'success', 'success': True,
-            'message': 'If an account exists, a reset link was sent',
-        })
+        # Always return a generic success message (don't reveal if email exists)
+        generic = {
+            'status': 'success',
+            'success': True,
+            'message': (
+                'If an account exists for that email, a password reset link '
+                'has been sent. Check your inbox (and spam folder).'
+            ),
+        }
+        if not user:
+            return jsonify(generic)
+
+        reset_token = secrets.token_urlsafe(32)
+        # Use DB clock for expiry so it matches reset_expires > NOW()
+        # (Postgres session time is SAST / UTC+2 on this machine).
+        cursor.execute("""
+            UPDATE users
+            SET reset_token = %s,
+                reset_expires = NOW() + INTERVAL '1 hour'
+            WHERE user_id = %s
+        """, (reset_token, user[0]))
+        conn.commit()
+
+        reset_link = f"{frontend_base}/reset-password.html?token={reset_token}"
+        print(f"Password reset link for {email}: {reset_link}")
+
+        email_sent = False
+        try:
+            email_sent = bool(
+                notification_service.send_password_reset(email, reset_link, expires_hours=1)
+            )
+        except Exception as mail_err:
+            print(f'Password reset email failed: {mail_err}')
+
+        payload = dict(generic)
+        if email_sent:
+            payload['message'] = (
+                f'Password reset link sent to {email}. '
+                'Check your inbox (and spam folder).'
+            )
+            payload['email_sent'] = True
+        else:
+            # Local/dev fallback when SMTP fails — still let the farmer reset
+            payload['message'] = (
+                'Could not send email right now. Use the reset link below '
+                '(valid for 1 hour).'
+            )
+            payload['email_sent'] = False
+            payload['reset_link'] = reset_link
+        return jsonify(payload)
     except Exception as e:
         print(f'Forgot password error: {e}')
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -426,8 +1324,10 @@ def forgot_password():
 
 @app.route('/api/reset-password', methods=['POST'])
 def reset_password():
+    from urllib.parse import unquote
+
     data             = request.get_json() or {}
-    token            = data.get('token',            '').strip()
+    token            = unquote(data.get('token', '') or '').strip()
     new_password     = data.get('new_password',     '').strip()
     confirm_password = data.get('confirm_password', '').strip()
 
@@ -446,12 +1346,15 @@ def reset_password():
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT user_id FROM users WHERE reset_token=%s AND reset_expires > NOW()
+            SELECT user_id FROM users
+            WHERE reset_token = %s
+              AND reset_expires IS NOT NULL
+              AND reset_expires > NOW()
         """, (token,))
         user = cursor.fetchone()
         if not user:
             return jsonify({'status': 'error',
-                            'message': 'Invalid or expired reset link'}), 400
+                            'message': 'Invalid or expired reset link. Please request a new one from the login page.'}), 400
         password_hash = bcrypt.hashpw(
             new_password.encode('utf-8'), bcrypt.gensalt()
         ).decode('utf-8')
@@ -471,50 +1374,15 @@ def reset_password():
 
 @app.route('/reset-password.html', methods=['GET'])
 def serve_reset_page():
+    """Redirect old API-hosted reset links to the Frontend page."""
     token = request.args.get('token', '')
-    return f'''<!DOCTYPE html>
-<html><head><title>Reset Password - AgriGuard</title>
-<style>
-  body{{font-family:Arial;background:#f5f5f5;display:flex;justify-content:center;
-       align-items:center;height:100vh;margin:0}}
-  .box{{background:#fff;padding:30px;border-radius:12px;width:400px;
-        box-shadow:0 2px 8px rgba(0,0,0,.1)}}
-  h2{{color:#1D9E75}}
-  input{{width:100%;padding:10px;margin:10px 0;border:1px solid #ddd;border-radius:6px;
-         box-sizing:border-box}}
-  button{{width:100%;padding:12px;background:#1D9E75;color:#fff;border:none;
-          border-radius:6px;cursor:pointer;font-size:15px}}
-  .err{{color:red;margin-top:8px}} .ok{{color:green;margin-top:8px}}
-</style></head>
-<body><div class="box">
-  <h2>🔒 Reset Password</h2>
-  <p>Enter your new password below</p>
-  <input type="password" id="p1" placeholder="New password (min 8 chars)">
-  <input type="password" id="p2" placeholder="Confirm new password">
-  <button onclick="go()">Reset Password</button>
-  <div id="msg"></div>
-</div>
-<script>
-const token='{token}';
-async function go(){{
-  const p1=document.getElementById('p1').value;
-  const p2=document.getElementById('p2').value;
-  const msg=document.getElementById('msg');
-  if(!p1||!p2){{msg.className='err';msg.textContent='Fill both fields';return}}
-  if(p1!==p2){{msg.className='err';msg.textContent='Passwords do not match';return}}
-  if(p1.length<8){{msg.className='err';msg.textContent='Min 8 characters';return}}
-  try{{
-    const r=await fetch('/api/reset-password',{{method:'POST',
-      headers:{{'Content-Type':'application/json'}},
-      body:JSON.stringify({{token,new_password:p1,confirm_password:p2}})}});
-    const d=await r.json();
-    if(d.status==='success'){{
-      msg.className='ok';msg.textContent='Reset! Redirecting...';
-      setTimeout(()=>window.location.href='login.html',2000);
-    }}else{{msg.className='err';msg.textContent=d.message}}
-  }}catch(e){{msg.className='err';msg.textContent='Network error'}}
-}}
-</script></body></html>'''
+    frontend_base = os.getenv(
+        'FRONTEND_BASE_URL', 'http://127.0.0.1:5500/Frontend'
+    ).rstrip('/')
+    target = f"{frontend_base}/reset-password.html"
+    if token:
+        target = f"{target}?token={token}"
+    return redirect(target)
 
 # ============================================
 # 10. ANIMAL ROUTES
@@ -526,16 +1394,17 @@ def get_animals():
     if not conn:
         return jsonify({'status': 'error', 'success': False, 'message': 'Database error'}), 500
     try:
+        ensure_animals_date_of_birth(conn)
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         cursor.execute("""
             SELECT a.animal_id, a.animal_tag, a.species, a.breed, a.gender,
-                   a.weight_kg, a.status, a.zone_id,
+                   a.weight_kg, a.status, a.zone_id, a.date_of_birth,
                    a.last_latitude, a.last_longitude,
                    z.zone_name, z.zone_type, z.color as zone_color,
                    g.speed_kmh, g.is_anomaly, g.anomaly_type, g.recorded_at,
                    CASE
                        WHEN g.is_anomaly = TRUE THEN 'critical'
-                       WHEN g.speed_kmh  > 10   THEN 'warning'
+                       WHEN g.speed_kmh  > 8    THEN 'warning'
                        ELSE 'normal'
                    END as gps_status
             FROM animals a
@@ -554,6 +1423,25 @@ def get_animals():
         cursor.close(); conn.close()
         for a in animals:
             if a.get('recorded_at'):    a['recorded_at']    = str(a['recorded_at'])
+            dob = a.get('date_of_birth')
+            if dob:
+                a['date_of_birth'] = str(dob)
+                try:
+                    birth = dob if hasattr(dob, 'year') else datetime.strptime(str(dob)[:10], '%Y-%m-%d').date()
+                    today = datetime.utcnow().date()
+                    months = (today.year - birth.year) * 12 + (today.month - birth.month)
+                    if today.day < birth.day:
+                        months -= 1
+                    months = max(0, months)
+                    if months < 12:
+                        a['age'] = '< 1 mo' if months <= 0 else f'{months} mo'
+                    else:
+                        years, rem = divmod(months, 12)
+                        a['age'] = f'{years} yr {rem} mo' if rem else f'{years} yr'
+                except Exception:
+                    a['age'] = None
+            else:
+                a['age'] = None
             if a.get('last_latitude')  is not None: a['last_latitude']  = float(a['last_latitude'])
             if a.get('last_longitude') is not None: a['last_longitude'] = float(a['last_longitude'])
             if a.get('speed_kmh')      is not None: a['speed_kmh']      = float(a['speed_kmh'])
@@ -561,6 +1449,19 @@ def get_animals():
     except Exception as e:
         print(f'Get animals error: {e}')
         return jsonify({'status': 'error', 'success': False, 'message': str(e)}), 500
+
+
+def parse_past_or_today_date(value, field_label='Date'):
+    """Parse YYYY-MM-DD and reject future dates. Empty/None => None."""
+    if value is None or value == '':
+        return None, None
+    try:
+        parsed = date.fromisoformat(str(value)[:10])
+    except (TypeError, ValueError):
+        return None, f'{field_label} is invalid.'
+    if parsed > date.today():
+        return None, f'{field_label} cannot be in the future.'
+    return parsed, None
 
 
 @app.route('/api/animals', methods=['POST'])
@@ -572,20 +1473,60 @@ def add_animal():
     breed      = data.get('breed',  '')
     gender     = data.get('gender', '')
     weight_kg  = data.get('weight_kg')
+    date_of_birth, dob_err = parse_past_or_today_date(
+        data.get('date_of_birth'), 'Date of birth'
+    )
+    if dob_err:
+        return jsonify({'status': 'error', 'success': False, 'message': dob_err}), 400
+
+    purchase_date, purchase_err = parse_past_or_today_date(
+        data.get('purchase_date'), 'Purchase date'
+    )
+    if purchase_err:
+        return jsonify({'status': 'error', 'success': False, 'message': purchase_err}), 400
+    if date_of_birth and purchase_date and purchase_date < date_of_birth:
+        return jsonify({
+            'status': 'error', 'success': False,
+            'message': 'Purchase date cannot be before date of birth.'
+        }), 400
 
     if not animal_tag or not species:
         return jsonify({'status': 'error', 'success': False,
                         'message': 'animal_tag and species required'}), 400
 
+    if weight_kg is not None and weight_kg != '':
+        try:
+            weight_kg = float(weight_kg)
+            if weight_kg < 0:
+                return jsonify({'status': 'error', 'success': False,
+                                'message': 'Weight cannot be negative.'}), 400
+        except (TypeError, ValueError):
+            return jsonify({'status': 'error', 'success': False,
+                            'message': 'weight_kg must be a number'}), 400
+    else:
+        weight_kg = None
+
+    purchase_price = data.get('purchase_price')
+    if purchase_price is not None and purchase_price != '':
+        try:
+            purchase_price = float(purchase_price)
+            if purchase_price < 0:
+                return jsonify({'status': 'error', 'success': False,
+                                'message': 'Purchase price cannot be negative.'}), 400
+        except (TypeError, ValueError):
+            return jsonify({'status': 'error', 'success': False,
+                            'message': 'purchase_price must be a number'}), 400
+
     conn = get_db()
     if not conn:
         return jsonify({'status': 'error', 'success': False, 'message': 'Database error'}), 500
     try:
+        ensure_animals_date_of_birth(conn)
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO animals (user_id, animal_tag, species, breed, gender, weight_kg, status)
-            VALUES (%s,%s,%s,%s,%s,%s,'Active') RETURNING animal_id
-        """, (request.user_id, animal_tag, species, breed, gender, weight_kg))
+            INSERT INTO animals (user_id, animal_tag, species, breed, gender, weight_kg, date_of_birth, status)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,'Active') RETURNING animal_id
+        """, (request.user_id, animal_tag, species, breed, gender, weight_kg, date_of_birth))
         animal_id = cursor.fetchone()[0]
         conn.commit(); cursor.close(); conn.close()
         return jsonify({'status': 'success', 'success': True,
@@ -598,79 +1539,78 @@ def add_animal():
         print(f'Add animal error: {e}')
         return jsonify({'status': 'error', 'success': False, 'message': str(e)}), 500
 
-@app.route('/api/animals/<animal_tag>', methods=['GET'])
-@token_required
-def get_animal(current_user, animal_tag):
-    """Get specific animal details"""
+@app.route('/api/animals/<int:animal_id>', methods=['PUT'])
+@role_required(['farmer', 'admin'])
+def update_animal(animal_id):
+    """Update animal details (weight, breed, gender, DOB, tag, species, status)."""
+    data = request.get_json() or {}
+    conn = get_db()
+    if not conn:
+        return jsonify({'status': 'error', 'success': False, 'message': 'Database error'}), 500
     try:
-        conn = get_db()
-        if not conn:
-            return jsonify({'message': 'Database connection failed'}), 500
-        
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM animals WHERE tag = %s AND user_id = %s", (animal_tag, current_user))
-        animal = cur.fetchone()
-        cur.close()
-        conn.close()
-        
-        if not animal:
-            return jsonify({'message': 'Animal not found'}), 404
-        
-        return jsonify({'success': True, 'animal': animal}), 200
-        
-    except Exception as e:
-        return jsonify({'message': str(e)}), 500
+        ensure_animals_date_of_birth(conn)
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(
+            "SELECT * FROM animals WHERE animal_id=%s AND user_id=%s",
+            (animal_id, request.user_id)
+        )
+        existing = cursor.fetchone()
+        if not existing:
+            cursor.close(); conn.close()
+            return jsonify({'status': 'error', 'success': False,
+                            'message': 'Animal not found or access denied'}), 404
 
-@app.route('/api/animals/<animal_tag>/anomaly', methods=['POST'])
-@token_required
-def report_animal_anomaly(current_user, animal_tag):
-    """Report anomaly for a specific animal"""
-    try:
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({'message': 'No data provided'}), 400
-        
-        anomaly_type = data.get('anomaly_type', 'Unusual behavior')
-        location = data.get('location', 'Unknown')
-        severity = data.get('severity', 'Medium')
-        details = data.get('details', '')
-        farmer_email = data.get('email')
-        
-        # Get user's email if not provided
-        if not farmer_email:
-            conn = get_db()
-            if conn:
-                cur = conn.cursor(cursor_factory=RealDictCursor)
-                cur.execute("SELECT email FROM users WHERE id = %s", (current_user,))
-                user = cur.fetchone()
-                cur.close()
-                conn.close()
-                if user:
-                    farmer_email = user['email']
-        
-        # Handle the anomaly and send alert
-        alert_sent = False
-        if farmer_email:
-            alert_sent = handle_anomaly(
-                animal_tag=animal_tag,
-                anomaly_type=anomaly_type,
-                location=location,
-                farmer_email=farmer_email,
-                severity=severity,
-                details=details
+        animal_tag = (data.get('animal_tag', existing.get('animal_tag') or '') or '').strip()
+        species    = (data.get('species', existing.get('species') or '') or '').strip()
+        breed      = data.get('breed', existing.get('breed') or '')
+        gender     = data.get('gender', existing.get('gender') or '')
+        weight_kg  = data.get('weight_kg', existing.get('weight_kg'))
+        status     = data.get('status', existing.get('status') or 'Active')
+        if 'date_of_birth' in data:
+            date_of_birth, dob_err = parse_past_or_today_date(
+                data.get('date_of_birth'), 'Date of birth'
             )
-        
-        return jsonify({
-            'success': True,
-            'message': 'Anomaly reported successfully',
-            'alert_sent': alert_sent,
-            'animal_tag': animal_tag,
-            'anomaly_type': anomaly_type
-        }), 200
-        
+            if dob_err:
+                cursor.close(); conn.close()
+                return jsonify({'status': 'error', 'success': False, 'message': dob_err}), 400
+        else:
+            date_of_birth = existing.get('date_of_birth')
+        if weight_kg == '' or weight_kg is None:
+            weight_kg = None
+        else:
+            try:
+                weight_kg = float(weight_kg)
+                if weight_kg < 0:
+                    cursor.close(); conn.close()
+                    return jsonify({'status': 'error', 'success': False,
+                                    'message': 'Weight cannot be negative.'}), 400
+            except (TypeError, ValueError):
+                cursor.close(); conn.close()
+                return jsonify({'status': 'error', 'success': False,
+                                'message': 'weight_kg must be a number'}), 400
+
+        if not animal_tag or not species:
+            cursor.close(); conn.close()
+            return jsonify({'status': 'error', 'success': False,
+                            'message': 'animal_tag and species required'}), 400
+
+        cursor.execute("""
+            UPDATE animals
+            SET animal_tag=%s, species=%s, breed=%s, gender=%s,
+                weight_kg=%s, date_of_birth=%s, status=%s
+            WHERE animal_id=%s AND user_id=%s
+        """, (animal_tag, species, breed, gender, weight_kg, date_of_birth,
+              status, animal_id, request.user_id))
+        conn.commit()
+        cursor.close(); conn.close()
+        return jsonify({'status': 'success', 'success': True,
+                        'message': 'Animal updated successfully'})
+    except psycopg2.IntegrityError:
+        return jsonify({'status': 'error', 'success': False,
+                        'message': 'Animal tag already exists'}), 409
     except Exception as e:
-        return jsonify({'message': str(e)}), 500
+        print(f'Update animal error: {e}')
+        return jsonify({'status': 'error', 'success': False, 'message': str(e)}), 500
 
 
 @app.route('/api/animals/<int:animal_id>', methods=['DELETE'])
@@ -837,6 +1777,111 @@ def update_user_role(user_id):
         print(f'Update role error: {e}')
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+
+# Admin: permanently delete a user account (and related animals/zones/alerts/etc.)
+# Used by Frontend/admin/users.html — Delete button. Blocks self-delete and last-admin delete.
+@app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
+@role_required(['admin'])
+def admin_delete_user(user_id):
+    """Delete a user and their related livestock/auction data."""
+    if user_id == request.user_id:
+        return jsonify({
+            'status': 'error',
+            'success': False,
+            'message': 'You cannot delete your own admin account',
+        }), 400
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'status': 'error', 'success': False, 'message': 'Database error'}), 500
+
+    def _exec(cur, sql, params=None):
+        """Run optional cleanup SQL; skip missing tables/columns without undoing prior work."""
+        try:
+            cur.execute("SAVEPOINT admin_del_sp")
+            cur.execute(sql, params or ())
+            cur.execute("RELEASE SAVEPOINT admin_del_sp")
+            return True
+        except Exception as e:
+            msg = str(e).lower()
+            try:
+                cur.execute("ROLLBACK TO SAVEPOINT admin_del_sp")
+            except Exception:
+                pass
+            if 'does not exist' in msg or 'undefinedtable' in msg or 'undefinedcolumn' in msg:
+                return False
+            raise
+
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(
+            "SELECT user_id, email, role FROM users WHERE user_id=%s",
+            (user_id,),
+        )
+        target = cursor.fetchone()
+        if not target:
+            cursor.close(); conn.close()
+            return jsonify({'status': 'error', 'success': False, 'message': 'User not found'}), 404
+
+        if (target.get('role') or '').lower() == 'admin':
+            cursor.execute(
+                "SELECT COUNT(*) AS n FROM users WHERE LOWER(role)='admin'"
+            )
+            admin_count = cursor.fetchone()['n']
+            if admin_count <= 1:
+                cursor.close(); conn.close()
+                return jsonify({
+                    'status': 'error',
+                    'success': False,
+                    'message': 'Cannot delete the last admin account',
+                }), 400
+
+        _exec(cursor, "DELETE FROM vaccinations WHERE user_id=%s", (user_id,))
+        _exec(cursor, """
+            DELETE FROM vaccinations
+            WHERE animal_id IN (SELECT animal_id FROM animals WHERE user_id=%s)
+        """, (user_id,))
+        _exec(cursor, "DELETE FROM alerts WHERE user_id=%s", (user_id,))
+        _exec(cursor, """
+            DELETE FROM gps_tracking
+            WHERE animal_id IN (SELECT animal_id FROM animals WHERE user_id=%s)
+        """, (user_id,))
+        _exec(cursor, "UPDATE animals SET zone_id=NULL WHERE user_id=%s", (user_id,))
+        _exec(cursor, "DELETE FROM zones WHERE user_id=%s", (user_id,))
+        _exec(cursor, "DELETE FROM geofence_polygons WHERE user_id=%s", (user_id,))
+        _exec(cursor, "DELETE FROM geofences WHERE user_id=%s", (user_id,))
+        _exec(cursor, "DELETE FROM animals WHERE user_id=%s", (user_id,))
+        _exec(cursor, "DELETE FROM bids WHERE user_id=%s OR buyer_id=%s", (user_id, user_id))
+        _exec(cursor, "DELETE FROM watchlist WHERE user_id=%s OR buyer_id=%s", (user_id, user_id))
+        _exec(cursor, "DELETE FROM auctions WHERE user_id=%s OR seller_id=%s OR farmer_id=%s",
+              (user_id, user_id, user_id))
+        _exec(cursor, "DELETE FROM disputes WHERE user_id=%s OR raised_by=%s", (user_id, user_id))
+
+        cursor.execute("DELETE FROM users WHERE user_id=%s", (user_id,))
+        if cursor.rowcount == 0:
+            conn.rollback()
+            cursor.close(); conn.close()
+            return jsonify({'status': 'error', 'success': False, 'message': 'User not found'}), 404
+
+        conn.commit()
+        cursor.close(); conn.close()
+        return jsonify({
+            'status': 'success',
+            'success': True,
+            'message': f"User {target.get('email')} deleted",
+        })
+    except Exception as e:
+        print(f'Admin delete user error: {e}')
+        try:
+            conn.rollback(); conn.close()
+        except Exception:
+            pass
+        return jsonify({
+            'status': 'error',
+            'success': False,
+            'message': f'Could not delete user: {e}',
+        }), 500
+
 # ============================================
 # 14. HEALTH & VACCINATION ROUTES
 # ============================================
@@ -847,21 +1892,44 @@ def get_vaccinations():
     if not conn:
         return jsonify({'status': 'error', 'message': 'Database error'}), 500
     try:
+        ensure_vaccinations_schema(conn)
+        has_notes = vaccinations_has_column(conn, 'notes')
+        notes_select = 'v.notes' if has_notes else "'' AS notes"
+        # Prefer due_date; fall back to next_due_date if present in older schemas
+        has_due = vaccinations_has_column(conn, 'due_date')
+        has_next_due = vaccinations_has_column(conn, 'next_due_date')
+        if has_due and has_next_due:
+            due_select = 'COALESCE(v.due_date, v.next_due_date) AS due_date'
+        elif has_due:
+            due_select = 'v.due_date'
+        elif has_next_due:
+            due_select = 'v.next_due_date AS due_date'
+        else:
+            due_select = 'NULL AS due_date'
+
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT v.vaccine_id, v.animal_id, a.animal_tag, a.species,
-                   v.vaccine_name, v.vaccination_date, v.due_date,
+                   v.vaccine_name, v.vaccination_date, {due_select},
                    v.is_completed, v.dosage_ml, v.vet_name, v.batch_number,
-                   v.manufacturer, v.notes, v.created_at
+                   v.manufacturer, {notes_select}, v.created_at
             FROM vaccinations v
             JOIN animals a ON a.animal_id = v.animal_id
-            WHERE a.user_id=%s ORDER BY v.due_date ASC
+            WHERE a.user_id=%s
+            ORDER BY due_date ASC NULLS LAST
         """, (request.user_id,))
         vaccinations = cursor.fetchall()
         cursor.close(); conn.close()
         for v in vaccinations:
             for field in ['vaccination_date', 'due_date', 'created_at']:
                 if v.get(field): v[field] = str(v[field])
+            v['is_completed'] = bool(v.get('is_completed'))
+            if v.get('dosage_ml') is not None:
+                v['dosage_ml'] = float(v['dosage_ml'])
+            if v.get('notes') is None:
+                v['notes'] = ''
+            if v.get('manufacturer') is None:
+                v['manufacturer'] = ''
         return jsonify({'status': 'success', 'success': True, 'data': vaccinations})
     except Exception as e:
         print(f'Get vaccinations error: {e}')
@@ -877,10 +1945,43 @@ def add_vaccination():
     if not animal_id or not vaccine_name:
         return jsonify({'status': 'error',
                         'message': 'animal_id and vaccine_name required'}), 400
+
+    vaccination_date, vax_err = parse_past_or_today_date(
+        data.get('vaccination_date'), 'Vaccination date'
+    )
+    if vax_err:
+        return jsonify({'status': 'error', 'message': vax_err}), 400
+
+    due_raw = data.get('due_date')
+    due_date = None
+    if due_raw not in (None, ''):
+        try:
+            due_date = date.fromisoformat(str(due_raw)[:10])
+        except (TypeError, ValueError):
+            return jsonify({'status': 'error', 'message': 'Next due date is invalid.'}), 400
+        if vaccination_date and due_date < vaccination_date:
+            return jsonify({
+                'status': 'error',
+                'message': 'Next due date cannot be before vaccination date.'
+            }), 400
+
+    dosage_ml = data.get('dosage_ml')
+    if dosage_ml not in (None, ''):
+        try:
+            dosage_ml = float(dosage_ml)
+            if dosage_ml < 0:
+                return jsonify({'status': 'error', 'message': 'Dose cannot be negative.'}), 400
+        except (TypeError, ValueError):
+            return jsonify({'status': 'error', 'message': 'Dose must be a number.'}), 400
+    else:
+        dosage_ml = None
+
     conn = get_db()
     if not conn:
         return jsonify({'status': 'error', 'message': 'Database error'}), 500
     try:
+        ensure_vaccinations_schema(conn)
+        has_notes = vaccinations_has_column(conn, 'notes')
         cursor = conn.cursor()
         cursor.execute(
             "SELECT animal_id FROM animals WHERE animal_id=%s AND user_id=%s",
@@ -890,20 +1991,44 @@ def add_vaccination():
             cursor.close(); conn.close()
             return jsonify({'status': 'error',
                             'message': 'Animal not found or access denied'}), 404
-        cursor.execute("""
-            INSERT INTO vaccinations
-                (animal_id, user_id, vaccine_name, vaccination_date, due_date,
-                 dosage_ml, vet_name, batch_number, manufacturer, notes, is_completed)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,TRUE) RETURNING vaccine_id
-        """, (animal_id, request.user_id,
-              vaccine_name,
-              data.get('vaccination_date'), data.get('due_date'),
-              data.get('dosage_ml'),
-              data.get('vet_name',      ''),
-              data.get('batch_number',  ''),
-              data.get('manufacturer',  ''),
-              data.get('notes',         '')))
+
+        # Keep next_due_date in sync on older schemas that still have it
+        has_next_due = vaccinations_has_column(conn, 'next_due_date')
+        if has_notes:
+            cursor.execute("""
+                INSERT INTO vaccinations
+                    (animal_id, user_id, vaccine_name, vaccination_date, due_date,
+                     dosage_ml, vet_name, batch_number, manufacturer, notes, is_completed)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING vaccine_id
+            """, (animal_id, request.user_id,
+                  vaccine_name,
+                  vaccination_date, due_date,
+                  dosage_ml,
+                  data.get('vet_name',      ''),
+                  data.get('batch_number',  ''),
+                  data.get('manufacturer',  ''),
+                  data.get('notes',         ''),
+                  bool(data['is_completed']) if 'is_completed' in data else True))
+        else:
+            cursor.execute("""
+                INSERT INTO vaccinations
+                    (animal_id, user_id, vaccine_name, vaccination_date, due_date,
+                     dosage_ml, vet_name, batch_number, manufacturer, is_completed)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING vaccine_id
+            """, (animal_id, request.user_id,
+                  vaccine_name,
+                  vaccination_date, due_date,
+                  dosage_ml,
+                  data.get('vet_name',      ''),
+                  data.get('batch_number',  ''),
+                  data.get('manufacturer',  ''),
+                  bool(data['is_completed']) if 'is_completed' in data else True))
         vaccine_id = cursor.fetchone()[0]
+        if has_next_due and due_date is not None:
+            cursor.execute(
+                "UPDATE vaccinations SET next_due_date=%s WHERE vaccine_id=%s",
+                (due_date, vaccine_id)
+            )
         conn.commit(); cursor.close(); conn.close()
         return jsonify({'status': 'success', 'success': True,
                         'message': 'Vaccination recorded successfully',
@@ -916,21 +2041,47 @@ def add_vaccination():
 @app.route('/api/health/vaccinations/<int:vaccine_id>/complete', methods=['PUT'])
 @token_required
 def complete_vaccination(vaccine_id):
+    data = request.get_json(silent=True) or {}
+    reschedule_days = data.get('reschedule_days', 365)
+    try:
+        reschedule_days = int(reschedule_days)
+    except (TypeError, ValueError):
+        reschedule_days = 365
+    if reschedule_days < 1:
+        reschedule_days = 365
+
     conn = get_db()
     if not conn:
         return jsonify({'status': 'error', 'message': 'Database error'}), 500
     try:
+        ensure_vaccinations_schema(conn)
         cursor = conn.cursor()
+        next_due = date.today() + timedelta(days=reschedule_days)
+        has_next_due = vaccinations_has_column(conn, 'next_due_date')
+
         cursor.execute("""
-            UPDATE vaccinations SET is_completed=TRUE, completed_date=CURRENT_DATE
+            UPDATE vaccinations
+            SET is_completed=TRUE,
+                completed_date=CURRENT_DATE,
+                vaccination_date=COALESCE(vaccination_date, CURRENT_DATE),
+                due_date=%s
             WHERE vaccine_id=%s AND user_id=%s
-        """, (vaccine_id, request.user_id))
+        """, (next_due, vaccine_id, request.user_id))
         if cursor.rowcount == 0:
             cursor.close(); conn.close()
             return jsonify({'status': 'error', 'message': 'Vaccination not found'}), 404
+        if has_next_due:
+            cursor.execute(
+                "UPDATE vaccinations SET next_due_date=%s WHERE vaccine_id=%s AND user_id=%s",
+                (next_due, vaccine_id, request.user_id)
+            )
         conn.commit(); cursor.close(); conn.close()
-        return jsonify({'status': 'success', 'success': True,
-                        'message': 'Vaccination marked as completed'})
+        return jsonify({
+            'status': 'success',
+            'success': True,
+            'message': f'Marked as given. Next due set to {next_due.isoformat()}',
+            'next_due': next_due.isoformat()
+        })
     except Exception as e:
         print(f'Complete vaccination error: {e}')
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -958,14 +2109,18 @@ def get_health_stats():
         cursor.execute("""
             SELECT COUNT(*) as upcoming FROM vaccinations v
             JOIN animals a ON a.animal_id=v.animal_id
-            WHERE a.user_id=%s AND v.is_completed=FALSE
-              AND v.due_date BETWEEN CURRENT_DATE AND CURRENT_DATE+30
+            WHERE a.user_id=%s
+              AND COALESCE(v.due_date, v.next_due_date) IS NOT NULL
+              AND COALESCE(v.due_date, v.next_due_date) >= CURRENT_DATE
+              AND COALESCE(v.due_date, v.next_due_date) <= CURRENT_DATE + INTERVAL '30 days'
         """, (request.user_id,))
         upcoming = cursor.fetchone()['upcoming']
         cursor.execute("""
             SELECT COUNT(*) as overdue FROM vaccinations v
             JOIN animals a ON a.animal_id=v.animal_id
-            WHERE a.user_id=%s AND v.is_completed=FALSE AND v.due_date < CURRENT_DATE
+            WHERE a.user_id=%s
+              AND COALESCE(v.due_date, v.next_due_date) IS NOT NULL
+              AND COALESCE(v.due_date, v.next_due_date) < CURRENT_DATE
         """, (request.user_id,))
         overdue = cursor.fetchone()['overdue']
         cursor.close(); conn.close()
@@ -1005,6 +2160,12 @@ def get_zones():
         cursor.close(); conn.close()
         for z in zones:
             if z.get('created_at'): z['created_at'] = str(z['created_at'])
+            if z.get('center_latitude') is not None:
+                z['center_latitude'] = float(z['center_latitude'])
+            if z.get('center_longitude') is not None:
+                z['center_longitude'] = float(z['center_longitude'])
+            if z.get('radius_meters') is not None:
+                z['radius_meters'] = float(z['radius_meters'])
         return jsonify({'status': 'success', 'success': True, 'data': zones})
     except Exception as e:
         print(f'Get zones error: {e}')
@@ -1020,26 +2181,51 @@ def create_zone():
     if not zone_name or not zone_type:
         return jsonify({'status': 'error',
                         'message': 'zone_name and zone_type required'}), 400
-    if zone_type not in ['cattle', 'goat', 'sheep', 'poultry', 'mixed']:
+    if zone_type not in ['cattle', 'goat', 'sheep', 'mixed']:
         return jsonify({'status': 'error', 'message': 'Invalid zone_type'}), 400
+
+    try:
+        zlat = float(data.get('center_latitude'))
+        zlon = float(data.get('center_longitude'))
+        zrad = float(data.get('radius_meters') or 300)
+    except (TypeError, ValueError):
+        return jsonify({'status': 'error',
+                        'message': 'Valid center_latitude, center_longitude required'}), 400
+
     conn = get_db()
     if not conn:
         return jsonify({'status': 'error', 'message': 'Database error'}), 500
     try:
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Zones must be created inside the farm geofence (polygon if available)
+        ensure_geofences_schema(conn)
+        gf = fetch_user_geofence(cursor, request.user_id)
+        if not gf:
+            cursor.close(); conn.close()
+            return jsonify({
+                'status': 'error',
+                'message': 'Draw a farm geofence first, then create zones inside it'
+            }), 400
+
+        ok, msg, _hint = zone_fits_in_farm(zlat, zlon, zrad, gf)
+        if not ok:
+            cursor.close(); conn.close()
+            return jsonify({'status': 'error', 'message': msg}), 400
+
+        geofence_id = data.get('geofence_id') or gf['geofence_id']
+
         cursor.execute("""
             INSERT INTO zones
                 (user_id, geofence_id, zone_name, zone_type,
                  center_latitude, center_longitude, radius_meters, color)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING zone_id
         """, (request.user_id,
-              data.get('geofence_id'),
+              geofence_id,
               zone_name, zone_type,
-              data.get('center_latitude'),
-              data.get('center_longitude'),
-              data.get('radius_meters'),
+              zlat, zlon, zrad,
               data.get('color', '#1D9E75')))
-        zone_id = cursor.fetchone()[0]
+        zone_id = cursor.fetchone()['zone_id']
         conn.commit(); cursor.close(); conn.close()
         return jsonify({'status': 'success', 'success': True,
                         'message': 'Zone created successfully',
@@ -1116,11 +2302,41 @@ def delete_zone(zone_id):
 @app.route('/api/tracking/geofence', methods=['POST'])
 @role_required(['farmer', 'admin'])
 def create_geofence():
+    """Create or update the farmer's farm boundary without deleting zones.
+
+    Preferred input: polygon = [{lat, lng}, ...] (min 3 points).
+    Centre + radius are stored as derived helpers for ML / legacy circle fences.
+    Zones reference geofences with ON DELETE CASCADE, so replacing a fence via
+    DELETE+INSERT used to wipe the newest zones. Prefer UPDATE-in-place.
+    """
     data             = request.get_json() or {}
-    fence_name       = data.get('fence_name',       '').strip()
+    fence_name       = (data.get('fence_name') or 'Farm Boundary').strip()
+    polygon          = normalize_polygon_points(
+        data.get('polygon') or data.get('points') or data.get('coordinates')
+    )
+
     center_latitude  = data.get('center_latitude')
     center_longitude = data.get('center_longitude')
     radius_meters    = data.get('radius_meters')
+
+    if polygon:
+        clat, clon = polygon_centroid(polygon)
+        center_latitude = clat
+        center_longitude = clon
+        radius_meters = max(100, int(round(polygon_bounding_radius(polygon, clat, clon))))
+        polygon_payload = [{'lat': lat, 'lng': lon} for lat, lon in polygon]
+        polygon_json = json.dumps(polygon_payload)
+    else:
+        polygon_json = None
+        try:
+            center_latitude = float(center_latitude)
+            center_longitude = float(center_longitude)
+            radius_meters = float(radius_meters)
+        except (TypeError, ValueError):
+            return jsonify({
+                'status': 'error',
+                'message': 'Draw a polygon (min 3 points) or provide centre + radius'
+            }), 400
 
     if not fence_name or center_latitude is None or center_longitude is None or not radius_meters:
         return jsonify({'status': 'error', 'message': 'All fields required'}), 400
@@ -1129,41 +2345,135 @@ def create_geofence():
     if not conn:
         return jsonify({'status': 'error', 'message': 'Database error'}), 500
     try:
-        cursor = conn.cursor()
+        ensure_geofences_schema(conn)
+        has_column = geofences_has_polygon_column(conn)
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT geofence_id FROM geofences
+            WHERE user_id=%s
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (request.user_id,))
+        existing = cursor.fetchone()
+
+        if existing:
+            geofence_id = existing['geofence_id']
+            cursor.execute("""
+                UPDATE geofences
+                SET fence_name=%s,
+                    center_latitude=%s,
+                    center_longitude=%s,
+                    radius_meters=%s,
+                    is_active=TRUE
+                WHERE geofence_id=%s AND user_id=%s
+            """, (fence_name, center_latitude, center_longitude, radius_meters,
+                  geofence_id, request.user_id))
+            # Commit fence geometry immediately so polygon helpers cannot undo it
+            conn.commit()
+            print(
+                f'[geofence] UPDATED id={geofence_id} user={request.user_id} '
+                f'centre=({center_latitude:.6f},{center_longitude:.6f}) '
+                f'radius={radius_meters} polygon={bool(polygon_json)}'
+            )
+
+            save_geofence_polygon(
+                cursor, geofence_id, request.user_id, polygon_json, has_column
+            )
+            cursor.execute("""
+                UPDATE zones
+                SET geofence_id=%s
+                WHERE user_id=%s AND is_active=TRUE
+                  AND (geofence_id IS NULL OR geofence_id=%s)
+            """, (geofence_id, request.user_id, geofence_id))
+            conn.commit(); cursor.close(); conn.close()
+            return jsonify({'status': 'success', 'success': True,
+                            'message': 'Geofence updated successfully',
+                            'geofence_id': geofence_id,
+                            'updated': True,
+                            'has_polygon': polygon_json is not None,
+                            'center_latitude': center_latitude,
+                            'center_longitude': center_longitude,
+                            'radius_meters': radius_meters})
+
         cursor.execute("""
             INSERT INTO geofences
                 (user_id, fence_name, center_latitude, center_longitude, radius_meters)
             VALUES (%s,%s,%s,%s,%s) RETURNING geofence_id
         """, (request.user_id, fence_name,
               center_latitude, center_longitude, radius_meters))
-        geofence_id = cursor.fetchone()[0]
+        geofence_id = cursor.fetchone()['geofence_id']
+        conn.commit()
+        print(
+            f'[geofence] CREATED id={geofence_id} user={request.user_id} '
+            f'centre=({center_latitude:.6f},{center_longitude:.6f}) '
+            f'radius={radius_meters} polygon={bool(polygon_json)}'
+        )
+
+        save_geofence_polygon(
+            cursor, geofence_id, request.user_id, polygon_json, has_column
+        )
+        cursor.execute("""
+            UPDATE zones
+            SET geofence_id=%s
+            WHERE user_id=%s AND is_active=TRUE AND geofence_id IS NULL
+        """, (geofence_id, request.user_id))
         conn.commit(); cursor.close(); conn.close()
         return jsonify({'status': 'success', 'success': True,
                         'message': 'Geofence created successfully',
-                        'geofence_id': geofence_id}), 201
+                        'geofence_id': geofence_id,
+                        'updated': False,
+                        'has_polygon': polygon_json is not None,
+                        'center_latitude': center_latitude,
+                        'center_longitude': center_longitude,
+                        'radius_meters': radius_meters}), 201
     except Exception as e:
         print(f'Create geofence error: {e}')
+        try:
+            conn.rollback(); conn.close()
+        except Exception:
+            pass
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @app.route('/api/tracking/geofence', methods=['GET'])
 @role_required(['farmer', 'admin'])
 def get_geofences():
+    global _GEOFENCE_HAS_POLYGON_COL
     conn = get_db()
     if not conn:
         return jsonify({'status': 'error', 'message': 'Database error'}), 500
     try:
+        ensure_geofences_schema(conn)
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute("""
-            SELECT geofence_id, fence_name, center_latitude, center_longitude,
-                   radius_meters, is_active, created_at
-            FROM geofences WHERE user_id=%s ORDER BY created_at DESC
-        """, (request.user_id,))
+        if _GEOFENCE_HAS_POLYGON_COL:
+            try:
+                cursor.execute("""
+                    SELECT geofence_id, fence_name, center_latitude, center_longitude,
+                           radius_meters, polygon_json, is_active, created_at
+                    FROM geofences WHERE user_id=%s ORDER BY created_at DESC
+                """, (request.user_id,))
+            except Exception as e:
+                _conn_rollback(conn)
+                _GEOFENCE_HAS_POLYGON_COL = False
+                print(f'Get geofences polygon select fallback: {e}')
+                cursor.execute("""
+                    SELECT geofence_id, fence_name, center_latitude, center_longitude,
+                           radius_meters, is_active, created_at
+                    FROM geofences WHERE user_id=%s ORDER BY created_at DESC
+                """, (request.user_id,))
+        else:
+            cursor.execute("""
+                SELECT geofence_id, fence_name, center_latitude, center_longitude,
+                       radius_meters, is_active, created_at
+                FROM geofences WHERE user_id=%s ORDER BY created_at DESC
+            """, (request.user_id,))
         geofences = cursor.fetchall()
-        cursor.close(); conn.close()
+        data = []
         for g in geofences:
-            if g.get('created_at'): g['created_at'] = str(g['created_at'])
-        return jsonify({'status': 'success', 'success': True, 'data': geofences})
+            row = attach_geofence_polygon(cursor, dict(g), request.user_id)
+            data.append(serialize_geofence_row(row))
+        cursor.close(); conn.close()
+        return jsonify({'status': 'success', 'success': True, 'data': data})
     except Exception as e:
         print(f'Get geofences error: {e}')
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -1172,41 +2482,171 @@ def get_geofences():
 @app.route('/api/tracking/geofence', methods=['DELETE'])
 @role_required(['farmer', 'admin'])
 def delete_geofence():
+    """Clear farm geofence(s) but keep zones (detach FK before delete)."""
+    global _GEOFENCE_HAS_POLYGON_TBL
     conn = get_db()
     if not conn:
         return jsonify({'status': 'error', 'message': 'Database error'}), 500
     try:
+        ensure_geofences_schema(conn)
         cursor = conn.cursor()
+        # zones.geofence_id has ON DELETE CASCADE — detach first so zones survive
+        cursor.execute("""
+            UPDATE zones
+            SET geofence_id = NULL
+            WHERE user_id=%s
+              AND geofence_id IN (SELECT geofence_id FROM geofences WHERE user_id=%s)
+        """, (request.user_id, request.user_id))
+
+        # Remove local polygon file first (always)
+        try:
+            _save_polygon_file(request.user_id, None, None)
+        except Exception as e:
+            print(f'Delete geofence file clear: {e}')
+
+        if _GEOFENCE_HAS_POLYGON_TBL:
+            try:
+                cursor.execute(
+                    "DELETE FROM geofence_polygons WHERE user_id=%s",
+                    (request.user_id,)
+                )
+            except Exception as e:
+                _conn_rollback(conn)
+                _GEOFENCE_HAS_POLYGON_TBL = False
+                print(f'Delete geofence side table skipped: {e}')
+                # Re-run zone detach after rollback
+                cursor.execute("""
+                    UPDATE zones
+                    SET geofence_id = NULL
+                    WHERE user_id=%s
+                      AND geofence_id IN (SELECT geofence_id FROM geofences WHERE user_id=%s)
+                """, (request.user_id, request.user_id))
+
         cursor.execute("DELETE FROM geofences WHERE user_id=%s", (request.user_id,))
         conn.commit(); cursor.close(); conn.close()
-        return jsonify({'status': 'success', 'success': True, 'message': 'Geofence cleared'})
+        return jsonify({'status': 'success', 'success': True,
+                        'message': 'Geofence cleared (zones kept)'})
     except Exception as e:
         print(f'Delete geofence error: {e}')
+        try:
+            conn.rollback(); conn.close()
+        except Exception:
+            pass
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # ============================================
 # 17. GPS TRACKING ROUTES
 # ============================================
-@app.route('/api/tracking/simulate', methods=['POST'])
-@role_required(['farmer', 'admin'])
-def simulate_gps():
-    """
-    Generate simulated GPS movement for every active animal and detect anomalies.
 
-    Anomaly priority (most objective first):
-      P1  Geofence Breach  — animal clearly outside fence (>10 % over radius)
-      P2  High Speed       — speed > 15 km/h
-      P3  Night Movement   — current real time is 18:00–03:59
-      P4  ML / Erratic     — Isolation Forest catches subtle combined patterns
+# Live movement rules (supervisor demo — mimics collar pings without hardware)
+LIVE_TICK_SECONDS = 5
+# Per-animal behaviour weights on each tick
+LIVE_P_REST = 0.25
+LIVE_P_GRAZE = 0.55          # rest+graze = 0.80
+LIVE_P_WALK = 0.15           # → 0.95
+LIVE_P_ANOMALY = 0.05        # rare risk events
+_LIVE_HEADING = {}           # animal_id → radians (keeps movement smooth)
+
+
+def _offset_meters(lat, lon, distance_m, heading_rad):
+    """Move point by distance_m along heading (0 = north)."""
+    dlat = (distance_m * math.cos(heading_rad)) / 111320.0
+    dlon = (distance_m * math.sin(heading_rad)) / (111320.0 * math.cos(math.radians(lat)) or 1e-9)
+    return lat + dlat, lon + dlon
+
+
+def _species_live_profile(species):
+    s = (species or '').lower()
+    if 'goat' in s or 'sheep' in s:
+        return {
+            'graze_m': (3.0, 18.0), 'walk_m': (12.0, 35.0),
+            'graze_kmh': (0.3, 3.0), 'walk_kmh': (1.5, 4.5),
+        }
+    return {
+        'graze_m': (3.0, 15.0), 'walk_m': (10.0, 30.0),
+        'graze_kmh': (0.2, 2.5), 'walk_kmh': (1.0, 4.0),
+    }
+
+
+def _pick_live_start(animal, geofence):
+    if animal.get('last_lat') is not None and animal.get('last_lng') is not None:
+        return float(animal['last_lat']), float(animal['last_lng'])
+    if animal.get('zone_lat') is not None:
+        clat = float(animal['zone_lat'])
+        clon = float(animal['zone_lon'])
+        zr = float(animal['zone_radius'] or 200)
+        for _ in range(12):
+            ang = random.uniform(0, 2 * math.pi)
+            d = random.uniform(0, zr * 0.4)
+            tlat, tlon = _offset_meters(clat, clon, d, ang)
+            if is_inside_farm(tlat, tlon, geofence):
+                return tlat, tlon
+    return random_point_in_geofence(geofence)
+
+
+def _classify_live_point(lat, lon, speed, geofence, farm_lat, farm_lon, raw_radius,
+                         is_nighttime, animal, sim_hour):
+    """Classify one live GPS ping and create alerts when needed."""
+    distance = calculate_distance(lat, lon, farm_lat, farm_lon)
+    outside_farm = not is_inside_farm(lat, lon, geofence, circle_margin=1.05)
+
+    outside_zone = False
+    if (animal.get('zone_lat') is not None
+            and animal.get('zone_lon') is not None
+            and float(animal.get('zone_radius') or 0) > 0):
+        zone_dist = calculate_distance(
+            lat, lon, float(animal['zone_lat']), float(animal['zone_lon'])
+        )
+        outside_zone = zone_dist > float(animal['zone_radius']) * 1.05
+
+    if outside_farm:
+        return True, 'Geofence Breach', distance
+    if speed > 8:
+        return True, 'High Speed', distance
+    if is_nighttime and outside_zone:
+        return True, 'Night Movement', distance
+
+    try:
+        ml = anomaly_detector.predict(
+            speed=speed,
+            hour=sim_hour,
+            distance_from_center=distance,
+            geofence_radius=raw_radius,
+            outside_zone=outside_zone,
+        )
+        if ml.get('is_anomaly'):
+            ml_type = ml.get('anomaly_type') or 'Erratic Movement'
+            if ml_type == 'Night Movement' and (not is_nighttime or not outside_zone):
+                return False, None, distance
+            if ml_type == 'Geofence Breach' and not outside_farm:
+                return False, None, distance
+            return True, ml_type, distance
+    except Exception as ml_err:
+        print(f'Live ML skipped: {ml_err}')
+    return False, None, distance
+
+#GPS collar ping simulation for active animals
+@app.route('/api/tracking/live-tick', methods=['POST'])
+@role_required(['farmer', 'admin'])
+def live_gps_tick():
     """
+    One realistic GPS collar ping for every active animal.
+
+    Rules (LIVE_TICK_SECONDS ≈ 5s between calls from the UI):
+      ~25% rest, ~55% graze (3–15/18 m), ~15% walk, ~5% anomaly
+      Normal steps stay inside the farm polygon/circle fence.
+    """
+    global _LIVE_HEADING
     conn = get_db()
     if not conn:
         return jsonify({'status': 'error', 'message': 'Database error'}), 500
 
+    body = request.get_json(silent=True) or {}
+    is_nighttime = bool(body.get('night_mode', False))
+    sim_hour = 22 if is_nighttime else 12
+
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-
-        # ── Animals ──────────────────────────────────────────────────────────
         cursor.execute("""
             SELECT a.animal_id, a.animal_tag, a.species,
                    a.last_latitude  AS last_lat,
@@ -1221,178 +2661,121 @@ def simulate_gps():
             ORDER BY a.animal_id
         """, (request.user_id,))
         animals = cursor.fetchall()
-
         if not animals:
             cursor.close(); conn.close()
             return jsonify({'status': 'error', 'message': 'No active animals found'}), 404
 
-        # ── Geofence ─────────────────────────────────────────────────────────
-        cursor.execute("""
-            SELECT center_latitude, center_longitude, radius_meters
-            FROM geofences WHERE user_id=%s
-            ORDER BY created_at DESC LIMIT 1
-        """, (request.user_id,))
-        geofence = cursor.fetchone()
+        ensure_geofences_schema(conn)
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        geofence = fetch_user_geofence(cursor, request.user_id)
+        geo = farm_geometry(geofence)
+        farm_lat, farm_lon, raw_radius = geo['lat'], geo['lon'], geo['radius']
 
-        farm_lat   = float(geofence['center_latitude'])  if geofence else -23.8966
-        farm_lon   = float(geofence['center_longitude']) if geofence else  29.4488
-        raw_radius = float(geofence['radius_meters'])    if geofence else  2000.0
-
-        # ── Read night_mode preference sent by the frontend ──────────────────
-        body         = request.get_json(silent=True) or {}
-        client_night = body.get('night_mode', None)   # True / False / None
-
-        current_hour = datetime.now().hour
-        # Real clock night window: 18:00 – 03:59
-        real_nighttime = current_hour >= 18 or current_hour < 4
-
-        # If client explicitly sent night_mode, respect it;
-        # otherwise fall back to the real clock.
-        is_nighttime = client_night if isinstance(client_night, bool) else real_nighttime
-
-        simulated, anomalies = [], []
+        moved, anomalies = [], []
 
         for animal in animals:
-            # ── Starting position ─────────────────────────────────────────────
-            if animal.get('last_lat') is not None and animal.get('last_lng') is not None:
-                last_lat = float(animal['last_lat'])
-                last_lon = float(animal['last_lng'])
-            elif animal.get('zone_lat') is not None:
-                clat = float(animal['zone_lat'])
-                clon = float(animal['zone_lon'])
-                zr   = float(animal['zone_radius'] or 200)
-                ang  = random.uniform(0, 2 * math.pi)
-                d    = random.uniform(0, zr * 0.4)
-                last_lat = clat + (d / 111320) * math.cos(ang)
-                last_lon = clon + (d / (111320 * math.cos(math.radians(clat)))) * math.sin(ang)
+            aid = animal['animal_id']
+            last_lat, last_lon = _pick_live_start(animal, geofence)
+            profile = _species_live_profile(animal.get('species'))
+            heading = _LIVE_HEADING.get(aid, random.uniform(0, 2 * math.pi))
+            # Drift heading slightly so paths look natural
+            heading = (heading + random.uniform(-0.6, 0.6)) % (2 * math.pi)
+
+            roll = random.random()
+            lat, lon, speed = last_lat, last_lon, 0.0
+            forced_type = None
+
+            if roll < LIVE_P_REST:
+                speed = random.uniform(0.0, 0.2)
+            elif roll < LIVE_P_REST + LIVE_P_GRAZE:
+                step = random.uniform(*profile['graze_m'])
+                speed = random.uniform(*profile['graze_kmh'])
+                lat, lon = _offset_meters(last_lat, last_lon, step, heading)
+            elif roll < LIVE_P_REST + LIVE_P_GRAZE + LIVE_P_WALK:
+                step = random.uniform(*profile['walk_m'])
+                speed = random.uniform(*profile['walk_kmh'])
+                lat, lon = _offset_meters(last_lat, last_lon, step, heading)
             else:
-                ang  = random.uniform(0, 2 * math.pi)
-                d    = random.uniform(0, raw_radius * 0.4)
-                last_lat = farm_lat + (d / 111320) * math.cos(ang)
-                last_lon = farm_lon + (d / (111320 * math.cos(math.radians(farm_lat)))) * math.sin(ang)
-
-            cur_dist = calculate_distance(last_lat, last_lon, farm_lat, farm_lon)
-            inside   = cur_dist <= raw_radius
-
-            sim_hour      = current_hour
-            lat, lon      = last_lat, last_lon
-            speed         = 1.0
-
-            # ── Normal vs anomalous movement ──────────────────────────────────
-            if random.random() < 0.75 or not inside:
-                # 75 % chance: normal grazing
-                # If already outside: bring back inside first
-                if not inside:
-                    ang   = random.uniform(0, 2 * math.pi)
-                    d     = random.uniform(0, raw_radius * 0.5)
-                    lat   = farm_lat + (d / 111320) * math.cos(ang)
-                    lon   = farm_lon + (d / (111320 * math.cos(math.radians(farm_lat)))) * math.sin(ang)
-                else:
-                    step  = random.uniform(5, 60)
-                    ang   = random.uniform(0, 2 * math.pi)
-                    lat   = last_lat + (step / 111320) * math.cos(ang)
-                    lon   = last_lon + (step / (111320 * math.cos(math.radians(last_lat)))) * math.sin(ang)
-                speed = random.uniform(0.3, 4.0)
-
-            else:
-                # 25 % chance: anomalous
-                # Only include Night Movement if night mode is actually on
+                # Rare anomaly for demo realism
                 choices = ['High Speed', 'Geofence Breach']
-                if is_nighttime:
+                has_zone = (
+                    animal.get('zone_lat') is not None
+                    and animal.get('zone_lon') is not None
+                    and float(animal.get('zone_radius') or 0) > 0
+                )
+                if is_nighttime and has_zone:
                     choices.append('Night Movement')
+                forced_type = random.choice(choices)
 
-                choice = random.choice(choices)
-
-                if choice == 'High Speed':
-                    step  = random.uniform(200, 600)
-                    ang   = random.uniform(0, 2 * math.pi)
-                    lat   = last_lat + (step / 111320) * math.cos(ang)
-                    lon   = last_lon + (step / (111320 * math.cos(math.radians(last_lat)))) * math.sin(ang)
-                    speed = random.uniform(20, 50)
-
-                elif choice == 'Night Movement':
-                    step  = random.uniform(30, 120)
-                    ang   = random.uniform(0, 2 * math.pi)
-                    lat   = last_lat + (step / 111320) * math.cos(ang)
-                    lon   = last_lon + (step / (111320 * math.cos(math.radians(last_lat)))) * math.sin(ang)
-                    speed = random.uniform(1, 8)
-
-                else:  # Geofence Breach
-                    ang   = random.uniform(0, 2 * math.pi)
-                    d     = raw_radius * random.uniform(1.25, 1.6)
-                    lat   = farm_lat + (d / 111320) * math.cos(ang)
-                    lon   = farm_lon + (d / (111320 * math.cos(math.radians(farm_lat)))) * math.sin(ang)
+                if forced_type == 'High Speed':
+                    step = random.uniform(80, 220)
+                    heading = random.uniform(0, 2 * math.pi)
+                    lat, lon = _offset_meters(last_lat, last_lon, step, heading)
+                    speed = random.uniform(9, 25)
+                elif forced_type == 'Geofence Breach':
+                    lat, lon = random_point_outside_geofence(geofence)
                     speed = random.uniform(2, 10)
+                else:
+                    zlat = float(animal['zone_lat'])
+                    zlon = float(animal['zone_lon'])
+                    zr = float(animal['zone_radius'] or 200)
+                    placed = False
+                    for _ in range(8):
+                        ang = random.uniform(0, 2 * math.pi)
+                        d = zr * random.uniform(1.2, 1.5)
+                        tlat, tlon = _offset_meters(zlat, zlon, d, ang)
+                        if is_inside_farm(tlat, tlon, geofence, circle_margin=0.95):
+                            lat, lon = tlat, tlon
+                            placed = True
+                            break
+                    if not placed:
+                        lat, lon = _offset_meters(zlat, zlon, zr * 1.35, random.uniform(0, 2 * math.pi))
+                    speed = random.uniform(1, 6)
 
-            # ── Rule-based final validation (strict priority order) ────────────
-            final_anomaly = False
-            final_type    = None
-            distance      = calculate_distance(lat, lon, farm_lat, farm_lon)
+            # Keep normal movement inside the farm fence
+            if forced_type is None and geofence and not is_inside_farm(lat, lon, geofence):
+                heading = (heading + math.pi) % (2 * math.pi)
+                step_back = random.uniform(3, 12)
+                lat, lon = _offset_meters(last_lat, last_lon, step_back, heading)
+                if not is_inside_farm(lat, lon, geofence):
+                    lat, lon = last_lat, last_lon
+                    speed = random.uniform(0.0, 0.3)
 
-            # P1 — Geofence Breach (location beats everything)
-            if distance > raw_radius * 1.1:
-                final_anomaly, final_type = True, 'Geofence Breach'
+            _LIVE_HEADING[aid] = heading
 
-            # P2 — High Speed (physics beats time)
-            elif speed > 15:
-                final_anomaly, final_type = True, 'High Speed'
+            is_anom, anom_type, _dist = _classify_live_point(
+                lat, lon, speed, geofence, farm_lat, farm_lon, raw_radius,
+                is_nighttime, animal, sim_hour,
+            )
 
-            # P3 — Night Movement (only when night mode is active)
-            elif is_nighttime:
-                final_anomaly, final_type = True, 'Night Movement'
-
-            # P4 — ML model (subtle / combined patterns)
-            else:
-                try:
-                    ml = anomaly_detector.predict(
-                        speed=speed,
-                        hour=sim_hour,
-                        distance_from_center=distance,
-                        geofence_radius=raw_radius
-                    )
-                    if ml['is_anomaly']:
-                        ml_type = ml.get('anomaly_type', 'Erratic Movement')
-                        # Guard: don't let ML re-flag things rules already filtered out
-                        if ml_type == 'Night Movement' and not is_nighttime:
-                            pass   # suppress — it's daytime
-                        elif ml_type == 'Geofence Breach' and distance <= raw_radius * 1.1:
-                            pass   # suppress — animal is inside fence
-                        else:
-                            final_anomaly = True
-                            final_type    = ml_type or 'Erratic Movement'
-                except Exception as ml_err:
-                    print(f'ML prediction skipped: {ml_err}')
-
-            
-            # ── Persist GPS record ────────────────────────────────────────────
             cursor.execute("""
                 INSERT INTO gps_tracking
                     (animal_id, latitude, longitude, speed_kmh, is_anomaly, anomaly_type)
                 VALUES (%s,%s,%s,%s,%s,%s) RETURNING tracking_id
-            """, (animal['animal_id'], lat, lon, round(speed, 2),
-                  final_anomaly, final_type if final_anomaly else None))
+            """, (aid, lat, lon, round(speed, 2),
+                  is_anom, anom_type if is_anom else None))
             tracking_id = cursor.fetchone()['tracking_id']
-
             cursor.execute("""
                 UPDATE animals SET last_latitude=%s, last_longitude=%s WHERE animal_id=%s
-            """, (lat, lon, animal['animal_id']))
+            """, (lat, lon, aid))
 
-            simulated.append({
-                'tracking_id':  tracking_id,
-                'animal_id':    animal['animal_id'],
-                'animal_tag':   animal['animal_tag'],
-                'latitude':     lat,
-                'longitude':    lon,
-                'speed_kmh':    round(speed, 2),
-                'is_anomaly':   final_anomaly,
-                'anomaly_type': final_type if final_anomaly else None,
+            moved.append({
+                'tracking_id': tracking_id,
+                'animal_id': aid,
+                'animal_tag': animal['animal_tag'],
+                'latitude': lat,
+                'longitude': lon,
+                'speed_kmh': round(speed, 2),
+                'is_anomaly': is_anom,
+                'anomaly_type': anom_type if is_anom else None,
             })
 
-            
-            # ── Create alert if anomaly detected ─────────────────────────────
-            if final_anomaly:
+            if is_anom:
                 alert_msg = (
-                    f"🚨 {animal['animal_tag']} - {final_type} detected! "
+                    f"🚨 {animal['animal_tag']} - {anom_type} detected! "
                     f"Speed: {speed:.1f} km/h"
                 )
                 cursor.execute("""
@@ -1400,56 +2783,53 @@ def simulate_gps():
                         (user_id, animal_id, alert_type, alert_message,
                          severity, last_known_lat, last_known_lng)
                     VALUES (%s,%s,%s,%s,'Critical',%s,%s) RETURNING alert_id
-                """, (request.user_id, animal['animal_id'],
-                      final_type, alert_msg, lat, lon))
+                """, (request.user_id, aid, anom_type, alert_msg, lat, lon))
                 alert_id = cursor.fetchone()['alert_id']
-
-                # ── NEW: Send Email alerts ──
-                # Get user details for notifications
-                cursor.execute("""
-                    SELECT phone, email, first_name FROM users WHERE user_id = %s
-                """, (request.user_id,))
-                user = cursor.fetchone()
-                
-                if user and user['email']:
-                    notification_service.send_alert(
-                    email=user['email'],
-                    animal_tag=animal['animal_tag'],
-                    anomaly_type=final_type,
-                    location=f"Lat: {lat}, Lon: {lon}",
-                    severity="High",
-                    details=f"Speed: {speed:.1f} km/h, Animal moved outside geofence"
-                )
-
+                # Email only for serious events (avoid spam every 5s)
+                if anom_type in ('Geofence Breach', 'High Speed'):
+                    cursor.execute(
+                        "SELECT email FROM users WHERE user_id=%s", (request.user_id,)
+                    )
+                    user = cursor.fetchone()
+                    if user and user.get('email'):
+                        try:
+                            notification_service.send_alert(
+                                email=user['email'],
+                                animal_tag=animal['animal_tag'],
+                                anomaly_type=anom_type,
+                                location=f"Lat: {lat}, Lon: {lon}",
+                                severity="High",
+                                details=f"Speed: {speed:.1f} km/h (live tracking)",
+                            )
+                        except Exception as mail_err:
+                            print(f'Live alert email skipped: {mail_err}')
                 anomalies.append({
-                    'alert_id':      alert_id,
-                    'animal_id':     animal['animal_id'],
-                    'animal_tag':    animal['animal_tag'],
-                    'alert_message': alert_msg,
-                    'anomaly_type':  final_type,
-                    'latitude':      lat,
-                    'longitude':     lon,
+                    'alert_id': alert_id,
+                    'animal_id': aid,
+                    'animal_tag': animal['animal_tag'],
+                    'anomaly_type': anom_type,
+                    'latitude': lat,
+                    'longitude': lon,
                 })
 
         conn.commit()
         cursor.close(); conn.close()
-
+        print(
+            f'[live-tick] user={request.user_id} moved {len(moved)} animals, '
+            f'{len(anomalies)} anomalies'
+        )
         return jsonify({
-            'status':  'success',
+            'status': 'success',
             'success': True,
-            'message': (
-                f'✅ Simulated {len(simulated)} animals. '
-                f'🚨 {len(anomalies)} anomalies detected.'
-            ),
+            'message': f'Live tick: {len(moved)} animals',
             'data': {
-                'simulated':     simulated,
-                'anomalies':     anomalies,
+                'moved': moved,
+                'anomalies': anomalies,
                 'anomaly_count': len(anomalies),
-                'is_nighttime':  is_nighttime,
-                'current_hour':  current_hour,
-            }
+                'tick_seconds': LIVE_TICK_SECONDS,
+                'is_nighttime': is_nighttime,
+            },
         })
-
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -1460,39 +2840,280 @@ def simulate_gps():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
-@app.route('/api/tracking/animals', methods=['GET'])
+@app.route('/api/tracking/export', methods=['GET'])
 @role_required(['farmer', 'admin'])
-def get_tracking_data():
+def export_tracking_csv():
+    """Export GPS tracking history as CSV (REQ-29)."""
+    import csv
+    import io
+    from flask import Response
+
     conn = get_db()
     if not conn:
         return jsonify({'status': 'error', 'message': 'Database error'}), 500
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         cursor.execute("""
-            SELECT DISTINCT ON (a.animal_id)
-                a.animal_id, a.animal_tag, a.species, a.breed,
-                g.latitude, g.longitude, g.speed_kmh,
-                g.is_anomaly, g.anomaly_type, g.recorded_at,
-                CASE
-                    WHEN g.is_anomaly=TRUE THEN 'critical'
-                    WHEN g.speed_kmh>10   THEN 'warning'
-                    ELSE 'normal'
-                END as status
-            FROM animals a
-            LEFT JOIN gps_tracking g ON a.animal_id=g.animal_id
-            WHERE a.user_id=%s AND a.status='Active'
-            ORDER BY a.animal_id, g.recorded_at DESC NULLS LAST, g.tracking_id DESC
+            SELECT a.animal_tag, a.species, a.breed,
+                   g.latitude, g.longitude, g.speed_kmh,
+                   g.is_anomaly, g.anomaly_type, g.recorded_at
+            FROM gps_tracking g
+            JOIN animals a ON a.animal_id = g.animal_id
+            WHERE a.user_id = %s
+            ORDER BY g.recorded_at DESC
+            LIMIT 5000
         """, (request.user_id,))
-        tracking_data = cursor.fetchall()
+        rows = cursor.fetchall()
         cursor.close(); conn.close()
-        for item in tracking_data:
-            if item.get('recorded_at'): item['recorded_at'] = str(item['recorded_at'])
-            if item.get('latitude'):    item['latitude']    = float(item['latitude'])
-            if item.get('longitude'):   item['longitude']   = float(item['longitude'])
-            if item.get('speed_kmh'):   item['speed_kmh']   = float(item['speed_kmh'])
-        return jsonify({'status': 'success', 'success': True, 'data': tracking_data})
+
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow([
+            'animal_tag', 'species', 'breed', 'latitude', 'longitude',
+            'speed_kmh', 'is_anomaly', 'anomaly_type', 'recorded_at'
+        ])
+        for r in rows:
+            writer.writerow([
+                r.get('animal_tag'),
+                r.get('species'),
+                r.get('breed'),
+                r.get('latitude'),
+                r.get('longitude'),
+                r.get('speed_kmh'),
+                r.get('is_anomaly'),
+                r.get('anomaly_type') or '',
+                str(r.get('recorded_at') or ''),
+            ])
+
+        return Response(
+            buf.getvalue(),
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': 'attachment; filename=agriguard_tracking.csv'
+            }
+        )
     except Exception as e:
-        print(f'Get tracking data error: {e}')
+        print(f'Export tracking error: {e}')
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+# ============ BREED IDENTIFICATION (Module #4) ============
+# Model: breed_id/models/breed_classifier.onnx (runs on Python 3.14 via onnxruntime).
+# Fallback: proxy to BREED_SERVICE_URL if local load fails.
+
+BREED_SERVICE_URL = os.getenv('BREED_SERVICE_URL', 'http://localhost:5001')
+_BREED_ID_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'breed_id'))
+_PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+
+def _ensure_breed_id_importable():
+    """Put AgriGuard root on sys.path so `import breed_id` works."""
+    import sys
+    if _PROJECT_ROOT not in sys.path:
+        sys.path.insert(0, _PROJECT_ROOT)
+
+
+def _breed_identify_local(file_bytes: bytes, species: str | None = None):
+    """In-process identify using breed_id (ONNX on Py3.14, or TF if available)."""
+    _ensure_breed_id_importable()
+    from breed_id import identify_breed_from_photo, model_predict_fn
+    return identify_breed_from_photo(file_bytes, model_predict_fn, species=species)
+
+
+def _breed_identify_proxy(file_bytes: bytes, filename: str, content_type: str):
+    """Optional forward to standalone breed_id server."""
+    import requests as _requests
+    files = {
+        'image': (filename or 'photo.jpg', file_bytes, content_type or 'image/jpeg')
+    }
+    r = _requests.post(
+        f"{BREED_SERVICE_URL.rstrip('/')}/api/breed/identify",
+        files=files,
+        timeout=60,
+    )
+    try:
+        data = r.json()
+    except Exception:
+        data = {'success': False, 'error': 'Breed service returned invalid JSON'}
+    return data, r.status_code
+
+
+@app.route('/api/breed/supported', methods=['GET'])
+@role_required(['farmer', 'admin', 'buyer'])
+def api_breed_supported():
+    """List breeds the CNN can classify."""
+    try:
+        _ensure_breed_id_importable()
+        from breed_id import load_class_names, get_backend, BREED_CARE_LIBRARY
+        data = []
+        for name in load_class_names():
+            care = BREED_CARE_LIBRARY.get(name, {})
+            data.append({
+                'breed_name': name,
+                'species': care.get('species'),
+                'in_model': True,
+            })
+        return jsonify({
+            'status': 'success',
+            'success': True,
+            'data': data,
+            'backend': get_backend(),
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'success': False,
+            'message': 'Breed model unavailable. Install: pip install onnxruntime Pillow',
+            'detail': str(e),
+        }), 503
+
+
+@app.route('/api/breed/identify', methods=['POST'])
+@role_required(['farmer', 'admin'])
+def api_breed_identify():
+    """
+    Upload livestock photo → top-3 breed predictions + care tips (REQ-31–40).
+    multipart field: image (JPEG/PNG, max 5MB)
+    optional form field: species (Cattle|Sheep|Goat) to refine lookalikes
+    """
+    f = request.files.get('image') or request.files.get('file')
+    if not f or not f.filename:
+        return jsonify({
+            'status': 'error', 'success': False,
+            'message': 'No image uploaded. Use form field "image".'
+        }), 400
+
+    file_bytes = f.read()
+    if not file_bytes:
+        return jsonify({
+            'status': 'error', 'success': False,
+            'message': 'Empty image upload'
+        }), 400
+    if len(file_bytes) > 5 * 1024 * 1024:
+        return jsonify({
+            'status': 'error', 'success': False,
+            'message': 'Image too large. Maximum size is 5MB.'
+        }), 400
+
+    species = (request.form.get('species') or request.args.get('species') or '').strip() or None
+
+    # Prefer local ONNX (Python 3.14). Proxy only as fallback.
+    try:
+        result = _breed_identify_local(file_bytes, species=species)
+    except Exception as local_err:
+        print(f'Breed local identify failed: {local_err}')
+        try:
+            result, status = _breed_identify_proxy(
+                file_bytes, f.filename, f.mimetype or 'image/jpeg'
+            )
+            if not result.get('success'):
+                return jsonify({
+                    'status': 'error',
+                    'success': False,
+                    'message': result.get('error') or 'Breed identification failed',
+                    'data': result,
+                }), status if status >= 400 else 400
+            return jsonify({
+                'status': 'success',
+                'success': True,
+                'message': 'Breed identification complete',
+                'data': result,
+            })
+        except Exception as proxy_err:
+            detail = f'{local_err} | proxy: {proxy_err}'
+            print(f'Breed identify failed: {detail}')
+            return jsonify({
+                'status': 'error',
+                'success': False,
+                'message': (
+                    'Breed model could not load. Restart Flask with the project venv '
+                    '(d\\PROJECT\\AGRIGUARD\\venv\\Scripts\\python.exe Backend\\app.py). '
+                    'If packages are missing: pip install onnxruntime Pillow'
+                ),
+                'detail': detail,
+            }), 503
+
+    if not result or not result.get('success'):
+        return jsonify({
+            'status': 'error',
+            'success': False,
+            'message': (result or {}).get('error') or 'Breed identification failed',
+            'data': result,
+        }), 400
+
+    return jsonify({
+        'status': 'success',
+        'success': True,
+        'message': 'Breed identification complete',
+        'data': result,
+    })
+
+
+# ============ TRACKING ALERTS ============
+
+@app.route('/api/tracking/alerts', methods=['GET'])
+@role_required(['farmer', 'admin'])
+def get_tracking_alerts():
+    """Return recent anomaly alerts for the logged-in user (newest first)."""
+    conn = get_db()
+    if not conn:
+        return jsonify({'status': 'error', 'message': 'Database error'}), 500
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT al.alert_id, al.user_id, al.animal_id, al.alert_type,
+                   al.alert_message, al.severity, al.is_resolved,
+                   al.last_known_lat, al.last_known_lng, al.created_at,
+                   a.animal_tag
+            FROM alerts al
+            LEFT JOIN animals a ON a.animal_id = al.animal_id
+            WHERE al.user_id = %s
+            ORDER BY al.created_at DESC NULLS LAST, al.alert_id DESC
+            LIMIT 100
+        """, (request.user_id,))
+        rows = cursor.fetchall()
+        cursor.close(); conn.close()
+
+        for r in rows:
+            if r.get('created_at') is not None:
+                r['created_at'] = str(r['created_at'])
+            if r.get('last_known_lat') is not None:
+                r['last_known_lat'] = float(r['last_known_lat'])
+            if r.get('last_known_lng') is not None:
+                r['last_known_lng'] = float(r['last_known_lng'])
+            r['is_resolved'] = bool(r.get('is_resolved'))
+
+        return jsonify({'status': 'success', 'success': True, 'data': rows})
+    except Exception as e:
+        print(f'Get tracking alerts error: {e}')
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/tracking/alerts/<int:alert_id>/resolve', methods=['PUT'])
+@role_required(['farmer', 'admin'])
+def resolve_tracking_alert(alert_id):
+    """Mark an alert as resolved."""
+    conn = get_db()
+    if not conn:
+        return jsonify({'status': 'error', 'message': 'Database error'}), 500
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE alerts
+            SET is_resolved = TRUE
+            WHERE alert_id = %s AND user_id = %s
+            RETURNING alert_id
+        """, (alert_id, request.user_id,))
+        row = cursor.fetchone()
+        if not row:
+            cursor.close(); conn.close()
+            return jsonify({'status': 'error', 'message': 'Alert not found'}), 404
+        conn.commit()
+        cursor.close(); conn.close()
+        return jsonify({'status': 'success', 'success': True,
+                        'message': 'Alert resolved'})
+    except Exception as e:
+        print(f'Resolve alert error: {e}')
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
@@ -1500,7 +3121,7 @@ def get_tracking_data():
 
 @app.route('/api/anomaly/detect', methods=['POST'])
 @token_required
-def detect_anomaly(current_user):
+def detect_anomaly():
     """Detect anomalies for a specific animal and send alerts"""
     try:
         data = request.get_json()
@@ -1588,16 +3209,13 @@ def reset_animal_positions():
     if not conn:
         return jsonify({'status': 'error', 'message': 'Database error'}), 500
     try:
+        ensure_geofences_schema(conn)
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute("""
-            SELECT center_latitude, center_longitude, radius_meters
-            FROM geofences WHERE user_id=%s ORDER BY created_at DESC LIMIT 1
-        """, (request.user_id,))
-        geofence = cursor.fetchone()
-
-        farm_lat        = float(geofence['center_latitude'])  if geofence else -23.8966
-        farm_lon        = float(geofence['center_longitude']) if geofence else  29.4488
-        geofence_radius = float(geofence['radius_meters'])    if geofence else  2000.0
+        geofence = fetch_user_geofence(cursor, request.user_id)
+        geo = farm_geometry(geofence)
+        farm_lat        = geo['lat']
+        farm_lon        = geo['lon']
+        geofence_radius = geo['radius']
 
         cursor.execute("""
             SELECT a.animal_id, a.zone_id,
@@ -1616,23 +3234,20 @@ def reset_animal_positions():
                 clat = float(animal['center_latitude'])
                 clon = float(animal['center_longitude'])
                 zr   = float(animal['radius_meters'] or 200)
-                dist_from_farm = calculate_distance(clat, clon, farm_lat, farm_lon)
+                zone_ok = is_inside_farm(clat, clon, geofence, circle_margin=0.85)
 
-                if dist_from_farm <= geofence_radius * 0.85:
-                    for _ in range(10):
+                if zone_ok:
+                    for _ in range(14):
                         ang  = random.uniform(0, 2 * math.pi)
                         d    = random.uniform(0, min(zr * 0.6, geofence_radius * 0.4))
                         tlat = clat + (d / 111320) * math.cos(ang)
                         tlon = clon + (d / (111320 * math.cos(math.radians(clat)))) * math.sin(ang)
-                        if calculate_distance(tlat, tlon, farm_lat, farm_lon) <= geofence_radius * 0.9:
+                        if is_inside_farm(tlat, tlon, geofence, circle_margin=0.95):
                             lat, lon = tlat, tlon
                             break
 
             if lat is None:
-                ang  = random.uniform(0, 2 * math.pi)
-                d    = random.uniform(0, geofence_radius * 0.5)
-                lat  = farm_lat + (d / 111320) * math.cos(ang)
-                lon  = farm_lon + (d / (111320 * math.cos(math.radians(farm_lat)))) * math.sin(ang)
+                lat, lon = random_point_in_geofence(geofence)
 
             cursor.execute("""
                 INSERT INTO gps_tracking
@@ -1667,16 +3282,13 @@ def init_animal_positions():
     if not conn:
         return jsonify({'status': 'error', 'message': 'Database error'}), 500
     try:
+        ensure_geofences_schema(conn)
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute("""
-            SELECT center_latitude, center_longitude, radius_meters
-            FROM geofences WHERE user_id=%s ORDER BY created_at DESC LIMIT 1
-        """, (request.user_id,))
-        geofence = cursor.fetchone()
-
-        farm_lat        = float(geofence['center_latitude'])  if geofence else -23.8966
-        farm_lon        = float(geofence['center_longitude']) if geofence else  29.4488
-        geofence_radius = float(geofence['radius_meters'])    if geofence else  2000.0
+        geofence = fetch_user_geofence(cursor, request.user_id)
+        geo = farm_geometry(geofence)
+        farm_lat        = geo['lat']
+        farm_lon        = geo['lon']
+        geofence_radius = geo['radius']
 
         cursor.execute("""
             SELECT a.animal_id, a.zone_id,
@@ -1695,11 +3307,10 @@ def init_animal_positions():
             if a['last_latitude'] is None or a['last_longitude'] is None:
                 needs_placement = True
             else:
-                dist = calculate_distance(
+                if not is_inside_farm(
                     float(a['last_latitude']), float(a['last_longitude']),
-                    farm_lat, farm_lon
-                )
-                if dist > geofence_radius * 1.05:
+                    geofence, circle_margin=1.05
+                ):
                     needs_placement = True
 
             if not needs_placement:
@@ -1711,23 +3322,18 @@ def init_animal_positions():
                 clat           = float(a['center_latitude'])
                 clon           = float(a['center_longitude'])
                 zr             = float(a['zone_radius'] or 200)
-                dist_from_farm = calculate_distance(clat, clon, farm_lat, farm_lon)
-
-                if dist_from_farm <= geofence_radius * 0.85:
-                    for _ in range(10):
+                if is_inside_farm(clat, clon, geofence, circle_margin=0.85):
+                    for _ in range(14):
                         ang  = random.uniform(0, 2 * math.pi)
                         d    = random.uniform(0, min(zr * 0.6, geofence_radius * 0.4))
                         tlat = clat + (d / 111320) * math.cos(ang)
                         tlon = clon + (d / (111320 * math.cos(math.radians(clat)))) * math.sin(ang)
-                        if calculate_distance(tlat, tlon, farm_lat, farm_lon) <= geofence_radius * 0.9:
+                        if is_inside_farm(tlat, tlon, geofence, circle_margin=0.95):
                             lat, lon = tlat, tlon
                             break
 
             if lat is None:
-                ang = random.uniform(0, 2 * math.pi)
-                d   = random.uniform(0, geofence_radius * 0.5)
-                lat = farm_lat + (d / 111320) * math.cos(ang)
-                lon = farm_lon + (d / (111320 * math.cos(math.radians(farm_lat)))) * math.sin(ang)
+                lat, lon = random_point_in_geofence(geofence)
 
             cursor.execute("""
                 INSERT INTO gps_tracking
@@ -1752,6 +3358,92 @@ def init_animal_positions():
         except Exception:
             pass
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+# ============ AI CHAT ============
+
+def _chat_animals_for_user(user_id):
+    """Compact herd snapshot for chat context."""
+    conn = get_db()
+    if not conn:
+        return []
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT animal_tag, species, breed, gender, status, weight_kg
+            FROM animals
+            WHERE user_id = %s AND status = 'Active'
+            ORDER BY animal_id
+            LIMIT 25
+        """, (user_id,))
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        print(f'Chat animals context error: {e}')
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return []
+
+
+@app.route('/api/chat/status', methods=['GET'])
+@role_required(['farmer', 'admin', 'buyer'])
+def api_chat_status():
+    """Whether Gemini/OpenAI is configured for AI chat."""
+    return jsonify({
+        'status': 'success',
+        'success': True,
+        'data': chat_service.status(),
+    })
+
+
+@app.route('/api/chat', methods=['POST'])
+@role_required(['farmer', 'admin', 'buyer'])
+def api_chat():
+    """
+    Livestock AI assistant.
+    Body: { message, language?: EN|ZU|ST|AF, history?: [{role,text}] }
+    """
+    data = request.get_json(silent=True) or {}
+    message = (data.get('message') or data.get('question') or '').strip()
+    language = (data.get('language') or 'EN').upper()
+    history = data.get('history') or []
+    if not isinstance(history, list):
+        history = []
+
+    if language not in ('EN', 'ZU', 'ST', 'AF'):
+        language = 'EN'
+
+    animals = _chat_animals_for_user(request.user_id) if request.user_role in ('farmer', 'admin') else []
+    result = chat_service.chat(
+        message=message,
+        language=language,
+        animals=animals,
+        history=history,
+    )
+
+    if not result.get('success'):
+        code = 503 if result.get('code') == 'AI_NOT_CONFIGURED' else 502
+        return jsonify({
+            'status': 'error',
+            'success': False,
+            'message': result.get('error') or 'Chat failed',
+            'code': result.get('code'),
+        }), code
+
+    return jsonify({
+        'status': 'success',
+        'success': True,
+        'data': {
+            'reply': result['reply'],
+            'provider': result.get('provider'),
+            'language': result.get('language'),
+            'animals_in_context': len(animals),
+        },
+    })
 
 
 # ============ ERROR HANDLERS ============

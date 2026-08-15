@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="../css/agriguard-theme.css"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AgriGuard – Breed Identification</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#F7F4EE;--surface:#fff;--border:#E5E1D8;--text:#163528;--text2:#374151;--text3:#6b7280;
+  --green:#1D9E75;--green-dark:#0F6E56;--green-light:#E1F5EE;--red:#ef4444;--amber:#f59e0b;
+  --shadow:0 10px 30px rgba(15,110,86,.06);
+}
+body{font-family:"Source Sans 3",system-ui,sans-serif;background:var(--bg);color:var(--text)}
+.navbar{background:#fff;padding:12px 24px;display:flex;justify-content:space-between;align-items:center;
+        box-shadow:var(--shadow);flex-wrap:wrap;gap:10px;border-bottom:1px solid var(--border)}
+.logo{font-size:20px;font-weight:700;color:var(--green);font-family:"Fraunces",Georgia,serif}
+.nav-links{display:flex;gap:4px;flex-wrap:wrap}
+.nav-links a{text-decoration:none;color:var(--text2);padding:7px 12px;border-radius:8px;font-size:13px}
+.nav-links a:hover{background:var(--green-light);color:var(--green)}
+.nav-links a.active{background:#E1F5EE;color:#1D9E75;border-radius:999px}
+.logout-btn{background:transparent;color:#B42318;border:1px solid #E8C4C0;border-radius:999px;padding:7px 16px;cursor:pointer;font-size:13px;font-weight:700}
+.container{max-width:960px;margin:0 auto;padding:24px 20px}
+h1{font-size:26px;margin-bottom:4px;color:#111827;display:flex;align-items:center;gap:.4em}
+.sub{color:var(--text3);font-size:14px;margin-bottom:18px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
+.panel h3{font-size:15px;margin-bottom:12px}
+.panel > h3{
+  margin-bottom:12px;
+  font-size:16px;
+  color:var(--green);
+  font-family:"Fraunces",Georgia,serif;
+}
+.drop{
+  position:relative;
+  overflow:hidden;
+  border:1.5px dashed #A7D7C5;
+  border-radius:16px;
+  padding:28px 20px;
+  text-align:center;
+  cursor:pointer;
+  background:linear-gradient(180deg,#FBF9F4,#F3F8F5);
+  transition:border-color .18s ease, background .18s ease, box-shadow .18s ease;
+  user-select:none;
+}
+.drop:hover,.drop.drag{
+  border-color:var(--green);
+  background:var(--green-light);
+  box-shadow:0 10px 24px rgba(29,158,117,.12);
+}
+.drop .upload-icon{
+  width:48px;height:48px;margin:0 auto 10px;border-radius:14px;
+  background:#fff;border:1px solid var(--border);color:var(--green);
+  display:grid;place-items:center;
+  pointer-events:none;
+}
+.drop strong,.drop .hint{pointer-events:none}
+.drop strong{display:block;font-size:14px;color:var(--text);margin-bottom:4px}
+/* Keep native file control fully out of layout — never overlay the drop zone */
+#file,
+.drop input[type="file"]{
+  position:absolute !important;
+  width:1px !important;
+  height:1px !important;
+  padding:0 !important;
+  margin:-1px !important;
+  overflow:hidden !important;
+  clip:rect(0,0,0,0) !important;
+  clip-path:inset(50%) !important;
+  border:0 !important;
+  white-space:nowrap !important;
+  opacity:0 !important;
+  pointer-events:none !important;
+  appearance:none !important;
+  background:transparent !important;
+  box-shadow:none !important;
+}
+#file::-webkit-file-upload-button,
+#file::file-selector-button{
+  display:none !important;
+}
+.preview{display:none;margin-top:12px}
+.preview img{width:100%;max-height:280px;object-fit:contain;border-radius:10px;border:1px solid var(--border)}
+.btn{padding:10px 18px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;width:100%;margin-top:12px}
+.btn-primary{background:var(--green);color:#fff}
+.btn-primary:disabled{opacity:.55;cursor:not-allowed}
+.hint{font-size:12px;color:var(--text3);margin-top:10px;line-height:1.4}
+.warn{color:#b45309;font-size:13px;margin-top:8px;line-height:1.4}
+.err{color:var(--red);font-size:13px}
+.empty{color:var(--text3);text-align:center;padding:20px;font-size:13px}
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 18px;border-radius:10px;background:#111827;color:#fff;display:none;z-index:99;max-width:340px;font-size:13px}
+.toast.err{background:var(--red)}
+.species-row{margin-top:12px}
+.species-row label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.species-row select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:13px}
+
+/* Result format only — same colours as rest of app */
+.result-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}
+.result-top h2{font-size:24px;font-weight:700}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{display:inline-flex;padding:6px 11px;border-radius:999px;font-size:12px;font-weight:700}
+.badge.species{background:#E1F5EE;color:#1D9E75}
+.badge.high{background:var(--green-light);color:var(--green)}
+.badge.mid{background:#fef3c7;color:#92400e}
+.badge.low{background:#fee2e2;color:#991b1b}
+.market{background:var(--green-light);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.market label{display:block;font-size:12px;font-weight:600;color:var(--green);margin-bottom:4px}
+.market strong{font-size:22px;color:var(--green)}
+.chars h4,.alts h4{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:#fff;border:1px solid var(--border);border-radius:999px;padding:7px 11px;font-size:12px;color:var(--text2)}
+.alts{margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.alt-row{display:flex;flex-wrap:wrap;gap:8px}
+.alt{background:#fafafa;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;color:var(--text2)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+@media(max-width:800px){.split{grid-template-columns:1fr}}
+.rec h3{font-size:15px;margin-bottom:10px}
+.summary{background:var(--green-light);border-radius:10px;padding:12px;font-size:13px;color:var(--text2);line-height:1.45;margin-bottom:12px}
+.bullets{list-style:none;display:flex;flex-direction:column;gap:8px}
+.bullets li{position:relative;padding-left:16px;font-size:13px;line-height:1.45;color:var(--text2)}
+.bullets li::before{content:"";position:absolute;left:0;top:6px;width:7px;height:7px;border-radius:50%;background:var(--green)}
+.result-actions{
+  display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;padding-top:14px;
+  border-top:1px solid var(--border);align-items:center;
+}
+.result-actions .btn{width:auto;margin-top:0;padding:10px 18px}
+.btn-outline{
+  background:#fff;color:var(--green);border:1.5px solid var(--green);
+}
+.btn-outline:hover{background:var(--green-light)}
+.result-actions .hint{margin-top:0;flex:1;min-width:180px}
+</style>
+</head>
+<body>
+<div class="navbar">
+  <div class="logo"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> AgriGuard</div>
+  <div class="nav-links">
+    <a href="dashboard.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Dashboard</a>
+    <a href="animals.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 18c-3 0-5-2-5-5 0-2 1-3 2-4-.5-2 1-4 3-4s3.5 2 3 4c1 1 2 2 2 4 0 3-2 5-5 5z"/><path d="M8 10c-1.5-.5-3 0-3.5 1.5M16 10c1.5-.5 3 0 3.5 1.5M10 19v2M14 19v2"/></svg> My Animals</a>
+    <a href="breed-id.html" class="active"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v6a3 3 0 003 3h4a3 3 0 003-3V4M7 20v-6a3 3 0 013-3h4a3 3 0 013 3v6M9 4h.01M15 4h.01M9 20h.01M15 20h.01"/></svg> Breed ID</a>
+    <a href="add-animal.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add Animals</a>
+    <a href="tracking.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg> Tracking</a>
+    <a href="health.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2 4 4 0 017 2c0 5.5-7 10-7 10z"/></svg> Health</a>
+    <a href="vaccinations.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3l7 7M11 6l7 7M4 14l6 6M3 21l4-1 9-9-3-3-9 9-1 4z"/></svg> Vaccination</a>
+    <a href="auctions.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14l-4 4M14 4l6 6M4.5 16.5L9 12l7-7 3 3-7 7-4.5 4.5zM13 19h8"/></svg> Auction</a>
+    <a href="chat-bot.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 01-8 8H7l-4 3v-5a8 8 0 118-6z"/></svg> AI Chat</a>
+  </div>
+  <div class="nav-actions">
+    <button type="button" class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</div>
+<div class="container">
+  <h1><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v6a3 3 0 003 3h4a3 3 0 003-3V4M7 20v-6a3 3 0 013-3h4a3 3 0 013 3v6M9 4h.01M15 4h.01M9 20h.01M15 20h.01"/></svg> AI Breed Identification</h1>
+  <p class="sub">Upload a livestock photo for top-3 South African breed matches and care tips</p>
+
+  <div class="panel">
+    <h3>Upload photo</h3>
+    <div class="drop" id="drop" role="button" tabindex="0" aria-label="Upload livestock photo">
+      <div class="upload-icon" aria-hidden="true">
+        <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h3l2-3h8l2 3h3a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </div>
+      <strong>Click to choose JPEG / PNG</strong>
+      <div class="hint">Max 5MB · clear side view works best</div>
+    </div>
+    <input type="file" id="file" accept="image/jpeg,image/png,image/webp" tabindex="-1" aria-hidden="true"/>
+    <div class="preview" id="preview"><img id="prevImg" alt="preview"/></div>
+    <div class="species-row">
+      <label for="species">Species hint (helps Dorper vs Boer Goat)</label>
+      <select id="species">
+        <option value="">Auto (all breeds)</option>
+        <option value="Sheep">Sheep</option>
+        <option value="Goat">Goat</option>
+        <option value="Cattle">Cattle</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" id="btn" disabled onclick="identify()">Identify Breed</button>
+  </div>
+
+  <div id="results">
+    <div class="panel"><div class="empty">Results appear here after you identify a breed</div></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'http://localhost:5000';
+let selected = null;
+
+function getToken(){ return localStorage.getItem('agriguard_token'); }
+function logout(){
+  localStorage.removeItem('agriguard_token');
+  localStorage.removeItem('agriguard_user');
+  localStorage.removeItem('agriguard_role');
+  window.location.href = '../login.html';
+}
+function requireLogin(){ if(!getToken()) window.location.href = '../login.html'; }
+
+let toastTimer;
+function toast(msg, type='ok'){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast' + (type==='err' ? ' err' : '');
+  el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> el.style.display='none', 9000);
+}
+
+function esc(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function confBadge(pct, low){
+  if (low || pct < 40) return {cls:'low', label:'Low Confidence'};
+  if (pct >= 70) return {cls:'high', label:'High Confidence'};
+  return {cls:'mid', label:'Medium Confidence'};
+}
+
+function bullets(items){
+  return (items || []).map(t => `<li>${esc(t)}</li>`).join('');
+}
+
+function normalizeSpeciesLabel(s){
+  const v = String(s || '').trim();
+  if (!v || /^livestock$/i.test(v)) return '';
+  const map = {
+    cattle: 'Cattle', cow: 'Cattle', bovine: 'Cattle',
+    goat: 'Goat', goats: 'Goat',
+    sheep: 'Sheep', ovine: 'Sheep'
+  };
+  return map[v.toLowerCase()] || (['Cattle','Goat','Sheep'].includes(v) ? v : v);
+}
+
+function prettyBreed(breed){
+  return String(breed || '').replace(/_/g, ' ').trim();
+}
+
+function goAddAnimal(breed, species){
+  const b = prettyBreed(breed);
+  const sp = normalizeSpeciesLabel(species);
+  try {
+    localStorage.setItem('agriguard_last_breed', JSON.stringify({
+      breed: b,
+      species: sp,
+      confidence: null,
+      at: Date.now(),
+      fromIdentify: true
+    }));
+  } catch (_) {}
+  const q = new URLSearchParams();
+  if (b) q.set('breed', b);
+  if (sp) q.set('species', sp);
+  window.location.href = `add-animal.html?${q.toString()}`;
+}
+
+function renderResults(data){
+  const preds = data.predictions || [];
+  const top = preds[0];
+  if (!top) {
+    document.getElementById('results').innerHTML =
+      `<div class="panel"><p class="err">No breed prediction returned.</p></div>`;
+    return;
+  }
+  const care = data.care_recommendations || {};
+  const conf = confBadge(top.confidence_percent, data.low_confidence_warning);
+  const speciesRaw = care.species || data.species_filter || '';
+  const species = normalizeSpeciesLabel(speciesRaw) || speciesRaw || 'Livestock';
+  const breedName = prettyBreed(top.breed);
+  const chars = care.visual_characteristics || [];
+  const feedPoints = care.feeding_points || [];
+  const carePoints = care.care_points || [care.housing_requirements, care.health_tips].filter(Boolean);
+  const alts = preds.slice(1);
+  const addBreedJs = JSON.stringify(breedName);
+  const addSpeciesJs = JSON.stringify(normalizeSpeciesLabel(species) || '');
+
+  document.getElementById('results').innerHTML = `
+    <div class="panel">
+      <div class="result-top">
+        <h2>${esc(breedName)}</h2>
+        <div class="badges">
+          <span class="badge species">${esc(species)}</span>
+          <span class="badge ${conf.cls}">${conf.label}</span>
+        </div>
+      </div>
+      ${care.market_value_range ? `
+        <div class="market">
+          <label>Estimated Market Value</label>
+          <strong>${esc(care.market_value_range)}</strong>
+        </div>` : ''}
+      ${chars.length ? `
+        <div class="chars">
+          <h4>Visual Characteristics</h4>
+          <div class="chips">${chars.map(c => `<span class="chip">${esc(c)}</span>`).join('')}</div>
+        </div>` : ''}
+      ${alts.length ? `
+        <div class="alts">
+          <h4>Other matches</h4>
+          <div class="alt-row">
+            ${alts.map(p => `<span class="alt">${esc(prettyBreed(p.breed))} · ${esc(p.confidence_percent)}%</span>`).join('')}
+          </div>
+        </div>` : ''}
+      ${data.lookalike_note ? `<p class="warn">${esc(data.lookalike_note)}</p>` : ''}
+      ${data.low_confidence_warning ? `<p class="warn">Low confidence — try a clearer livestock photo.</p>` : ''}
+      <p class="hint">Confidence ${esc(top.confidence_percent)}% · Inference ${esc(data.inference_time_seconds ?? '—')}s</p>
+      <div class="result-actions">
+        <button type="button" class="btn btn-primary" onclick='goAddAnimal(${addBreedJs}, ${addSpeciesJs})'>
+          Add this animal
+        </button>
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('file').click()">
+          Identify another
+        </button>
+        <span class="hint">Opens Register New Animal with breed and species filled in.</span>
+      </div>
+    </div>
+    <div class="split">
+      <div class="panel rec">
+        <h3>Feeding Recommendations</h3>
+        ${care.feeding_guidelines ? `<div class="summary">${esc(care.feeding_guidelines)}</div>` : ''}
+        <ul class="bullets">${bullets(feedPoints.length ? feedPoints : [care.feeding_guidelines].filter(Boolean))}</ul>
+      </div>
+      <div class="panel rec">
+        <h3>Care Recommendations</h3>
+        <ul class="bullets">${bullets(carePoints)}</ul>
+      </div>
+    </div>
+  `;
+}
+
+const drop = document.getElementById('drop');
+const file = document.getElementById('file');
+
+function setSelectedFile(f){
+  selected = f || null;
+  document.getElementById('btn').disabled = !selected;
+  if(selected){
+    document.getElementById('prevImg').src = URL.createObjectURL(selected);
+    document.getElementById('preview').style.display = 'block';
+  } else {
+    document.getElementById('preview').style.display = 'none';
+  }
+}
+
+drop.addEventListener('click', () => file.click());
+drop.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter' || e.key === ' '){
+    e.preventDefault();
+    file.click();
+  }
+});
+['dragenter','dragover'].forEach(evt => {
+  drop.addEventListener(evt, (e) => {
+    e.preventDefault();
+    drop.classList.add('drag');
+  });
+});
+['dragleave','drop'].forEach(evt => {
+  drop.addEventListener(evt, (e) => {
+    e.preventDefault();
+    drop.classList.remove('drag');
+  });
+});
+drop.addEventListener('drop', (e) => {
+  const f = e.dataTransfer?.files?.[0];
+  if(f && f.type.startsWith('image/')){
+    const dt = new DataTransfer();
+    dt.items.add(f);
+    file.files = dt.files;
+    setSelectedFile(f);
+  }
+});
+file.addEventListener('change', () => setSelectedFile(file.files[0] || null));
+
+async function identify(){
+  if(!selected) return;
+  const btn = document.getElementById('btn');
+  btn.disabled = true; btn.textContent = 'Identifying…';
+  const fd = new FormData();
+  fd.append('image', selected);
+  const species = document.getElementById('species').value;
+  if(species) fd.append('species', species);
+  try{
+    const r = await fetch(`${API}/api/breed/identify`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: fd
+    });
+    const d = await r.json();
+    if(!(d.status==='success' || d.success) || !d.data?.predictions){
+      const detail = d.detail ? `<br><span style="opacity:.85;font-size:12px">${esc(d.detail)}</span>` : '';
+      document.getElementById('results').innerHTML =
+        `<div class="panel"><p class="err">${esc(d.message || d.error || 'Identification failed')}${detail}</p></div>`;
+      toast(d.message || 'Failed', 'err');
+      return;
+    }
+    renderResults(d.data);
+    try {
+      const top = d.data.predictions?.[0];
+      const species = d.data.care_recommendations?.species || d.data.species_filter || '';
+      if (top?.breed) {
+        localStorage.setItem('agriguard_last_breed', JSON.stringify({
+          breed: String(top.breed).replace(/_/g, ' ').trim(),
+          species: species,
+          confidence: top.confidence_percent,
+          at: Date.now()
+        }));
+      }
+    } catch (_) {}
+    toast('Breed identification complete');
+  }catch(e){
+    console.error(e);
+    document.getElementById('results').innerHTML =
+      `<div class="panel"><p class="err">Cannot reach API. Is Flask on :5000 running?</p></div>`;
+    toast('Network error', 'err');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Identify Breed';
+  }
+}
+
+requireLogin();
+</script>
+</body>
+</html>

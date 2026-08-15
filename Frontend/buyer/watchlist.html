@@ -4,6 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/agriguard-theme.css">
     <title>AgriGuard - My Watchlist</title>
     <style>
         * {
@@ -13,8 +17,9 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
+            font-family: "Source Sans 3", system-ui, sans-serif;
+            background: #F7F4EE;
+            color: #163528;
         }
         
         .navbar {
@@ -50,28 +55,29 @@
         }
         
         .nav-links a:hover {
-            background: #f3f4f6;
+            background: #E1F5EE;
+            color: #1D9E75;
         }
         
         .nav-links a.active {
-            background: #1D9E75;
-            color: white;
-            border: 2px solid #0f6e56;
+            background: #E1F5EE;
+            color: #1D9E75;
+            border: none;
         }
         
         .logout-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
+            background: transparent;
+            color: #B42318;
+            border: 1px solid #E8C4C0;
             padding: 8px 18px;
-            border-radius: 8px;
+            border-radius: 999px;
             cursor: pointer;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 700;
         }
         
         .logout-btn:hover {
-            background: #dc2626;
+            background: #FCE8E6;
         }
         
         .container {
@@ -215,7 +221,7 @@
         }
         
         .bid-button:hover {
-            background: #0f6e56;
+            background: #0F6E56;
         }
         
         .added-date {
@@ -260,12 +266,12 @@
 </head>
 <body>
     <div class="navbar">
-        <div class="logo">🌾 AgriGuard</div>
+        <div class="logo"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> AgriGuard</div>
         <div class="nav-links">
-            <a href="../farmer/dashboard.html">📊 Dashboard</a>
-            <a href="auctions.html">💰 Browse Auctions</a>
+            <a href="dashboard.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Dashboard</a>
+            <a href="auctions.html"> <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14l-4 4M14 4l6 6M4.5 16.5L9 12l7-7 3 3-7 7-4.5 4.5zM13 19h8"/></svg> Browse Auctions</a>
             <a href="bid-history.html">📜 My Bids</a>
-            <a href="watchlist.html" class="active">⭐ Watchlist</a>
+            <a href="watchlist.html" class="active"> <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.1 6.3L22 9.3l-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg> Watchlist</a>
         </div>
         <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
@@ -273,10 +279,10 @@
     <div class="container">
         <div class="page-header">
             <div>
-                <h1>⭐ My Watchlist</h1>
+                <h1><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.1 6.3L22 9.3l-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg> My Watchlist</h1>
                 <p>Auctions you're following</p>
             </div>
-            <button onclick="clearWatchlist()" style="background: #f3f4f6; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">🗑 Clear All</button>
+            <button onclick="clearWatchlist()" style="background: #f3f4f6; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;"> <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg> Clear All</button>
         </div>
 
         <div id="watchlistGrid" class="watchlist-grid">
@@ -338,7 +344,7 @@
             toast.textContent = message;
             toast.className = `toast ${isError ? 'error' : ''}`;
             toast.style.display = 'block';
-            setTimeout(() => toast.style.display = 'none', 3000);
+            setTimeout(() => toast.style.display = 'none', 8000);
         }
         
         function logout() {
@@ -366,9 +372,9 @@
         
         function getSpeciesIcon(species) {
             const icons = {
-                'Cattle': '🐄',
-                'Goat': '🐐',
-                'Sheep': '🐑',
+                'Cattle': '',
+                'Goat': '',
+                'Sheep': '',
                 'Pig': '🐷'
             };
             return icons[species] || '🐾';
@@ -380,10 +386,10 @@
             if (watchlist.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-state-icon">⭐</div>
+                        <div class="empty-state-icon"></div>
                         <h3>Your watchlist is empty</h3>
                         <p>Browse auctions and click the star icon to add items to your watchlist</p>
-                        <button onclick="location.href='auctions.html'" style="margin-top: 20px; padding: 10px 24px; background: #1D9E75; color: white; border: none; border-radius: 8px; cursor: pointer;">Browse Auctions</button>
+                        <button onclick="location.href='auctions.html'" style="margin-top: 20px; padding: 10px 24px; background: #1D9E75; color: white; border: none; border-radius: 8px; cursor: pointer;"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14l-4 4M14 4l6 6M4.5 16.5L9 12l7-7 3 3-7 7-4.5 4.5zM13 19h8"/></svg> Browse Auctions</button>
                     </div>
                 `;
                 return;
