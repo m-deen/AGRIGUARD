@@ -3,7 +3,7 @@
 # ============================================
 from flask import Flask, request, jsonify, redirect
 from flask_cors import CORS
-from dotenv import load_dotenv
+from dotenv import load_dotenv      
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import bcrypt
@@ -15,11 +15,12 @@ import math
 import secrets
 from datetime import datetime, timedelta, timezone, date
 from functools import wraps
+import string
 from services.notification_services import NotificationService #For sending Email alerts#
 from services.chat_service import chat_service
 
 # Load environment variables
-load_dotenv()
+load_dotenv()      
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -52,7 +53,11 @@ def get_db():
 
 
 def ensure_animals_date_of_birth(conn):
-    """Backfill NULL date_of_birth values so Age can display."""
+    """
+    Confirm animals.date_of_birth exists.
+    Do not invent DOB — age stays blank ('-') until the farmer enters a real date.
+    Also undo the old demo backfill that invented DOBs for NULL rows (same formula).
+    """
     try:
         cur = conn.cursor()
         cur.execute("""
@@ -62,15 +67,19 @@ def ensure_animals_date_of_birth(conn):
             LIMIT 1
         """)
         if not cur.fetchone():
-            print('ensure_animals_date_of_birth: column missing (skipping ALTER; needs DB owner)')
+            print('ensure_animals_date_of_birth: column missing (skipping; needs DB owner)')
             cur.close()
             return
-        # Existing rows often have no DOB — give a stable estimated birth date
+        # Clear DOBs that match the previous auto-fill formula (not real farmer input)
         cur.execute("""
             UPDATE animals
-            SET date_of_birth = (CURRENT_DATE - (MOD(COALESCE(animal_id, 1), 5) + 1) * INTERVAL '1 year')
-                                - (MOD(COALESCE(animal_id, 1), 8) * INTERVAL '1 month')
-            WHERE date_of_birth IS NULL
+            SET date_of_birth = NULL
+            WHERE date_of_birth IS NOT NULL
+              AND date_of_birth = (
+                    (CURRENT_DATE
+                     - (MOD(COALESCE(animal_id, 1), 5) + 1) * INTERVAL '1 year')
+                    - (MOD(COALESCE(animal_id, 1), 8) * INTERVAL '1 month')
+                  )::date
         """)
         conn.commit()
         cur.close()
@@ -642,25 +651,35 @@ def random_point_in_geofence(gf, max_fraction=0.85, max_tries=50):
 
 
 def random_point_outside_geofence(gf):
-    """Place a point clearly outside the farm fence (geofence breach demo)."""
+    """
+    Place a point clearly outside the farm fence (geofence breach demo).
+    Just beyond the boundary (90–400 m), not a far teleport from the centre.
+    """
     geo = farm_geometry(gf)
     farm_lat, farm_lon, radius = geo['lat'], geo['lon'], geo['radius']
     poly = geo['polygon']
-    for _ in range(30):
-        ang = random.uniform(0, 2 * math.pi)
-        d = radius * random.uniform(1.2, 1.7)
-        lat = farm_lat + (d / 111320) * math.cos(ang)
-        lon = farm_lon + (d / (111320 * math.cos(math.radians(farm_lat)))) * math.sin(ang)
-        if poly:
+    step = random.uniform(90, 400)  # metres past the fence
+
+    # Polygon: walk from a random edge midpoint outward
+    if poly and len(poly) >= 3:
+        for _ in range(40):
+            i = random.randrange(len(poly))
+            j = (i + 1) % len(poly)
+            lat1, lon1 = poly[i]
+            lat2, lon2 = poly[j]
+            t = random.uniform(0.2, 0.8)
+            elat = lat1 + t * (lat2 - lat1)
+            elon = lon1 + t * (lon2 - lon1)
+            ang = math.atan2(elon - farm_lon, elat - farm_lat)
+            lat, lon = _offset_meters(elat, elon, step, ang)
             if not point_in_polygon(lat, lon, poly):
                 return lat, lon
-        else:
-            return lat, lon
+        ang = random.uniform(0, 2 * math.pi)
+        return _offset_meters(farm_lat, farm_lon, radius + step, ang)
+
+    # Circle fence: just beyond the radius
     ang = random.uniform(0, 2 * math.pi)
-    d = radius * 1.5
-    lat = farm_lat + (d / 111320) * math.cos(ang)
-    lon = farm_lon + (d / (111320 * math.cos(math.radians(farm_lat)))) * math.sin(ang)
-    return lat, lon
+    return _offset_meters(farm_lat, farm_lon, radius + step, ang)
 
 
 def zone_fits_in_farm(zlat, zlon, zrad, gf):
@@ -826,21 +845,22 @@ def token_required(f):
 class FallbackDetector:
     """
     Rule-only detector — used when scikit-learn / Isolation Forest is unavailable.
-    Priority order mirrors AnomalyDetector.predict():
-      P1 Geofence Breach → P2 High Speed → P3 Night Movement (night + out of zone)
+    Mirrors AnomalyDetector priority:
+      P1 Breach → P2 High Speed → P3 Erratic (mean turn) → P4 Night
     """
     SPEED_THRESHOLD = 8
-    NIGHT_START     = 18   # inclusive
-    NIGHT_END       = 4    # exclusive upper bound of night (i.e. hour < 4)
+    NIGHT_START     = 18
+    NIGHT_END       = 4
+    ERRATIC_MEAN_TURN_THRESHOLD = 1.2
 
-    def predict(self, speed, hour, distance, geofence_radius=2000, outside_zone=False):
-        # P1 — outside fence (10 % buffer)
+    def predict(self, speed, hour, distance, geofence_radius=2000,
+                outside_zone=False, heading_variance=0.0, **_kwargs):
         if geofence_radius and distance > geofence_radius * 1.1:
             return {'is_anomaly': True,  'anomaly_type': 'Geofence Breach',  'score': 0}
-        # P2 — too fast
         if speed > self.SPEED_THRESHOLD:
             return {'is_anomaly': True,  'anomaly_type': 'High Speed',        'score': 0}
-        # P3 — night AND outside assigned zone
+        if float(heading_variance or 0.0) >= self.ERRATIC_MEAN_TURN_THRESHOLD:
+            return {'is_anomaly': True,  'anomaly_type': 'Erratic Movement',  'score': 0}
         is_night = hour >= self.NIGHT_START or hour < self.NIGHT_END
         if is_night and outside_zone:
             return {'is_anomaly': True,  'anomaly_type': 'Night Movement',    'score': 0}
@@ -851,8 +871,8 @@ class FallbackDetector:
 try:
     from ml.anomaly_detector import AnomalyDetector
     anomaly_detector = AnomalyDetector()
-    anomaly_detector.train()
-    print("[OK] Anomaly detector (Isolation Forest) loaded successfully")
+    anomaly_detector.ensure_ready()  # load v2 if present, else train once
+    print("[OK] Anomaly detector (Isolation Forest v2) loaded successfully")
 except Exception as e:
     print(f"[WARN] Anomaly detector error - using rule-only fallback: {e}")
     anomaly_detector = FallbackDetector()
@@ -1464,14 +1484,33 @@ def parse_past_or_today_date(value, field_label='Date'):
     return parsed, None
 
 
+def generate_unique_ear_tag(cursor, max_tries=64):
+    """
+    System-assigned ear tag: AA-000 (2 letters A–Z + 3 digits).
+    ~676,000 combinations; globally unique across all farms.
+    """
+    letters = string.ascii_uppercase
+    for _ in range(max_tries):
+        tag = (
+            f"{random.choice(letters)}{random.choice(letters)}"
+            f"-{random.randint(0, 999):03d}"
+        )
+        cursor.execute(
+            "SELECT 1 FROM animals WHERE UPPER(animal_tag) = %s LIMIT 1",
+            (tag,),
+        )
+        if not cursor.fetchone():
+            return tag
+    raise RuntimeError('Could not allocate a unique ear tag — try again')
+
+
 @app.route('/api/animals', methods=['POST'])
 @role_required(['farmer', 'admin'])
 def add_animal():
     data       = request.get_json() or {}
-    animal_tag = data.get('animal_tag', '').strip()
     species    = data.get('species',    '').strip()
     breed      = data.get('breed',  '')
-    gender     = data.get('gender', '')
+    gender     = (data.get('gender') or '').strip()
     weight_kg  = data.get('weight_kg')
     date_of_birth, dob_err = parse_past_or_today_date(
         data.get('date_of_birth'), 'Date of birth'
@@ -1490,9 +1529,12 @@ def add_animal():
             'message': 'Purchase date cannot be before date of birth.'
         }), 400
 
-    if not animal_tag or not species:
+    if not species:
         return jsonify({'status': 'error', 'success': False,
-                        'message': 'animal_tag and species required'}), 400
+                        'message': 'species required'}), 400
+    if gender not in ('Male', 'Female'):
+        return jsonify({'status': 'error', 'success': False,
+                        'message': 'Gender is required (Male or Female).'}), 400
 
     if weight_kg is not None and weight_kg != '':
         try:
@@ -1523,26 +1565,51 @@ def add_animal():
     try:
         ensure_animals_date_of_birth(conn)
         cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO animals (user_id, animal_tag, species, breed, gender, weight_kg, date_of_birth, status)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,'Active') RETURNING animal_id
-        """, (request.user_id, animal_tag, species, breed, gender, weight_kg, date_of_birth))
-        animal_id = cursor.fetchone()[0]
-        conn.commit(); cursor.close(); conn.close()
-        return jsonify({'status': 'success', 'success': True,
-                        'message': 'Animal added successfully',
-                        'animal_id': animal_id}), 201
-    except psycopg2.IntegrityError:
-        return jsonify({'status': 'error', 'success': False,
-                        'message': 'Animal tag already exists'}), 409
+        animal_id = None
+        animal_tag = None
+        # Retry on rare race: another insert took the same tag between check and insert
+        for _ in range(8):
+            try:
+                animal_tag = generate_unique_ear_tag(cursor)
+                cursor.execute("""
+                    INSERT INTO animals (user_id, animal_tag, species, breed, gender, weight_kg, date_of_birth, status)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,'Active') RETURNING animal_id
+                """, (request.user_id, animal_tag, species, breed, gender, weight_kg, date_of_birth))
+                animal_id = cursor.fetchone()[0]
+                conn.commit()
+                break
+            except psycopg2.IntegrityError:
+                conn.rollback()
+                continue
+        cursor.close(); conn.close()
+        if animal_id is None:
+            return jsonify({'status': 'error', 'success': False,
+                            'message': 'Could not allocate a unique ear tag — try again'}), 503
+        return jsonify({
+            'status': 'success', 'success': True,
+            'message': f'Animal added successfully with ear tag {animal_tag}',
+            'animal_id': animal_id,
+            'animal_tag': animal_tag,
+        }), 201
+    except RuntimeError as e:
+        try:
+            conn.rollback(); conn.close()
+        except Exception:
+            pass
+        return jsonify({'status': 'error', 'success': False, 'message': str(e)}), 503
     except Exception as e:
         print(f'Add animal error: {e}')
+        try:
+            conn.rollback(); conn.close()
+        except Exception:
+            pass
         return jsonify({'status': 'error', 'success': False, 'message': str(e)}), 500
+
 
 @app.route('/api/animals/<int:animal_id>', methods=['PUT'])
 @role_required(['farmer', 'admin'])
 def update_animal(animal_id):
-    """Update animal details (weight, breed, gender, DOB, tag, species, status)."""
+    """Update animal details. Ear tag is system-assigned and cannot be changed."""
     data = request.get_json() or {}
     conn = get_db()
     if not conn:
@@ -1560,10 +1627,10 @@ def update_animal(animal_id):
             return jsonify({'status': 'error', 'success': False,
                             'message': 'Animal not found or access denied'}), 404
 
-        animal_tag = (data.get('animal_tag', existing.get('animal_tag') or '') or '').strip()
+        animal_tag = existing.get('animal_tag')  # immutable — system-only
         species    = (data.get('species', existing.get('species') or '') or '').strip()
         breed      = data.get('breed', existing.get('breed') or '')
-        gender     = data.get('gender', existing.get('gender') or '')
+        gender     = (data.get('gender', existing.get('gender') or '') or '').strip()
         weight_kg  = data.get('weight_kg', existing.get('weight_kg'))
         status     = data.get('status', existing.get('status') or 'Active')
         if 'date_of_birth' in data:
@@ -1589,10 +1656,14 @@ def update_animal(animal_id):
                 return jsonify({'status': 'error', 'success': False,
                                 'message': 'weight_kg must be a number'}), 400
 
-        if not animal_tag or not species:
+        if not species:
             cursor.close(); conn.close()
             return jsonify({'status': 'error', 'success': False,
-                            'message': 'animal_tag and species required'}), 400
+                            'message': 'species required'}), 400
+        if gender not in ('Male', 'Female'):
+            cursor.close(); conn.close()
+            return jsonify({'status': 'error', 'success': False,
+                            'message': 'Gender is required (Male or Female).'}), 400
 
         cursor.execute("""
             UPDATE animals
@@ -1604,10 +1675,8 @@ def update_animal(animal_id):
         conn.commit()
         cursor.close(); conn.close()
         return jsonify({'status': 'success', 'success': True,
-                        'message': 'Animal updated successfully'})
-    except psycopg2.IntegrityError:
-        return jsonify({'status': 'error', 'success': False,
-                        'message': 'Animal tag already exists'}), 409
+                        'message': 'Animal updated successfully',
+                        'animal_tag': animal_tag})
     except Exception as e:
         print(f'Update animal error: {e}')
         return jsonify({'status': 'error', 'success': False, 'message': str(e)}), 500
@@ -2538,14 +2607,20 @@ def delete_geofence():
 # 17. GPS TRACKING ROUTES
 # ============================================
 
-# Live movement rules (supervisor demo — mimics collar pings without hardware)
+# Live movement rules ( mimics collar pings without hardware)
 LIVE_TICK_SECONDS = 5
-# Per-animal behaviour weights on each tick
+# Per-animal behaviour weights on each tick (must sum to 1.0)
 LIVE_P_REST = 0.25
-LIVE_P_GRAZE = 0.55          # rest+graze = 0.80
-LIVE_P_WALK = 0.15           # → 0.95
-LIVE_P_ANOMALY = 0.05        # rare risk events
+LIVE_P_GRAZE = 0.53          # rest+graze+walk ≈ 92% normal
+LIVE_P_WALK = 0.14
+LIVE_P_ERRATIC = 0.03        # dedicated zig-zag (inside fence, under 8 km/h)
+LIVE_P_ANOMALY = 0.05        # High Speed / Geofence Breach / Night
 _LIVE_HEADING = {}           # animal_id → radians (keeps movement smooth)
+_LIVE_HEADING_HISTORY = {}   # animal_id → recent turn magnitudes; feature = rolling mean
+_LIVE_ERRATIC_STREAK = {}    # animal_id → ticks left in an erratic episode
+_LIVE_ERRATIC_ALERTED = set()  # animal_ids already alerted for current erratic episode
+_HEADING_HISTORY_LEN = 5
+ERRATIC_MEAN_TURN_THRESHOLD = 1.2  # radians — first-class Erratic rule
 
 
 def _offset_meters(lat, lon, distance_m, heading_rad):
@@ -2553,6 +2628,29 @@ def _offset_meters(lat, lon, distance_m, heading_rad):
     dlat = (distance_m * math.cos(heading_rad)) / 111320.0
     dlon = (distance_m * math.sin(heading_rad)) / (111320.0 * math.cos(math.radians(lat)) or 1e-9)
     return lat + dlat, lon + dlon
+
+
+def _wrapped_turn_angle(prev_heading, new_heading):
+    """Smallest turn between two headings; magnitude in [0, pi]."""
+    diff = (new_heading - prev_heading + math.pi) % (2 * math.pi) - math.pi
+    return abs(diff)
+
+
+def _update_heading_variance(aid, prev_heading, new_heading):
+    """
+    Track recent turn-angle magnitudes and return their rolling MEAN (radians).
+
+    Erratic ticks force large turns (~0.5π–0.9π) every step, so the mean stays
+    high (~2.0–2.5). Smooth graze/walk only drifts a little, so mean stays low
+    (~0.15–0.35). Std-dev of "all similarly large turns" can look low — mean
+    is the clearer signal for the ML heading feature.
+    """
+    turn = _wrapped_turn_angle(prev_heading, new_heading)
+    hist = _LIVE_HEADING_HISTORY.setdefault(aid, [])
+    hist.append(turn)
+    if len(hist) > _HEADING_HISTORY_LEN:
+        hist.pop(0)
+    return sum(hist) / len(hist)
 
 
 def _species_live_profile(species):
@@ -2585,8 +2683,17 @@ def _pick_live_start(animal, geofence):
 
 
 def _classify_live_point(lat, lon, speed, geofence, farm_lat, farm_lon, raw_radius,
-                         is_nighttime, animal, sim_hour):
-    """Classify one live GPS ping and create alerts when needed."""
+                         is_nighttime, animal, sim_hour, heading_variance=0.0):
+    """
+    Classify one live GPS ping.
+
+    Priority (most definitive first):
+      P1 Geofence Breach  — outside farm fence
+      P2 High Speed       — > 8 km/h
+      P3 Erratic Movement — mean turn size high while still "normal" on speed/fence
+      P4 Night Movement   — night + outside assigned zone
+      P5 Isolation Forest — subtler leftover patterns
+    """
     distance = calculate_distance(lat, lon, farm_lat, farm_lon)
     outside_farm = not is_inside_farm(lat, lon, geofence, circle_margin=1.05)
 
@@ -2599,13 +2706,22 @@ def _classify_live_point(lat, lon, speed, geofence, farm_lat, farm_lon, raw_radi
         )
         outside_zone = zone_dist > float(animal['zone_radius']) * 1.05
 
+    # P1 / P2 — objective location & physics
     if outside_farm:
         return True, 'Geofence Breach', distance
+    
     if speed > 8:
         return True, 'High Speed', distance
+
+    # P3 — Erratic is first-class: flag zig-zag even though speed/fence look normal
+    if float(heading_variance or 0.0) >= ERRATIC_MEAN_TURN_THRESHOLD:
+        return True, 'Erratic Movement', distance
+
+    # P4 — night theft signal (zone-based)
     if is_nighttime and outside_zone:
         return True, 'Night Movement', distance
 
+    # P5 — Isolation Forest for subtler combined patterns
     try:
         ml = anomaly_detector.predict(
             speed=speed,
@@ -2613,19 +2729,25 @@ def _classify_live_point(lat, lon, speed, geofence, farm_lat, farm_lon, raw_radi
             distance_from_center=distance,
             geofence_radius=raw_radius,
             outside_zone=outside_zone,
+            heading_variance=heading_variance,
         )
         if ml.get('is_anomaly'):
             ml_type = ml.get('anomaly_type') or 'Erratic Movement'
+            # Live path already decided fence/zone; ignore mismatched rule labels from detector
             if ml_type == 'Night Movement' and (not is_nighttime or not outside_zone):
                 return False, None, distance
             if ml_type == 'Geofence Breach' and not outside_farm:
+                return False, None, distance
+            if ml_type == 'High Speed' and speed <= 8:
                 return False, None, distance
             return True, ml_type, distance
     except Exception as ml_err:
         print(f'Live ML skipped: {ml_err}')
     return False, None, distance
 
-#GPS collar ping simulation for active animals
+
+# GPS collar ping simulation for animals
+
 @app.route('/api/tracking/live-tick', methods=['POST'])
 @role_required(['farmer', 'admin'])
 def live_gps_tick():
@@ -2635,6 +2757,7 @@ def live_gps_tick():
     Rules (LIVE_TICK_SECONDS ≈ 5s between calls from the UI):
       ~25% rest, ~55% graze (3–15/18 m), ~15% walk, ~5% anomaly
       Normal steps stay inside the farm polygon/circle fence.
+      Erratic Movement uses multi-tick zig-zag + heading_variance for ML.
     """
     global _LIVE_HEADING
     conn = get_db()
@@ -2681,25 +2804,50 @@ def live_gps_tick():
             last_lat, last_lon = _pick_live_start(animal, geofence)
             profile = _species_live_profile(animal.get('species'))
             heading = _LIVE_HEADING.get(aid, random.uniform(0, 2 * math.pi))
-            # Drift heading slightly so paths look natural
+            prev_heading = heading
+            # Default: slight drift (overridden for erratic ticks)
             heading = (heading + random.uniform(-0.6, 0.6)) % (2 * math.pi)
 
+            streak = _LIVE_ERRATIC_STREAK.get(aid, 0)
             roll = random.random()
             lat, lon, speed = last_lat, last_lon, 0.0
             forced_type = None
 
-            if roll < LIVE_P_REST:
+            p_rest = LIVE_P_REST
+            p_graze = p_rest + LIVE_P_GRAZE
+            p_walk = p_graze + LIVE_P_WALK
+            p_erratic = p_walk + LIVE_P_ERRATIC
+
+            if streak > 0:
+                # Continue multi-tick zig-zag episode
+                forced_type = 'Erratic Movement'
+                turn = random.uniform(math.pi * 0.5, math.pi * 0.9) * random.choice([-1, 1])
+                heading = (prev_heading + turn) % (2 * math.pi)
+                step = random.uniform(5, 25)
+                lat, lon = _offset_meters(last_lat, last_lon, step, heading)
+                speed = random.uniform(1.5, 7.5)  # under High Speed threshold
+                _LIVE_ERRATIC_STREAK[aid] = streak - 1
+            elif roll < p_rest:
                 speed = random.uniform(0.0, 0.2)
-            elif roll < LIVE_P_REST + LIVE_P_GRAZE:
+            elif roll < p_graze:
                 step = random.uniform(*profile['graze_m'])
                 speed = random.uniform(*profile['graze_kmh'])
                 lat, lon = _offset_meters(last_lat, last_lon, step, heading)
-            elif roll < LIVE_P_REST + LIVE_P_GRAZE + LIVE_P_WALK:
+            elif roll < p_walk:
                 step = random.uniform(*profile['walk_m'])
                 speed = random.uniform(*profile['walk_kmh'])
                 lat, lon = _offset_meters(last_lat, last_lon, step, heading)
+            elif roll < p_erratic:
+                # Dedicated Erratic band — short episode (this tick + 1–2 more)
+                forced_type = 'Erratic Movement'
+                _LIVE_ERRATIC_STREAK[aid] = random.randint(1, 2)
+                turn = random.uniform(math.pi * 0.5, math.pi * 0.9) * random.choice([-1, 1])
+                heading = (prev_heading + turn) % (2 * math.pi)
+                step = random.uniform(5, 25)
+                lat, lon = _offset_meters(last_lat, last_lon, step, heading)
+                speed = random.uniform(1.5, 7.5)
             else:
-                # Rare anomaly for demo realism
+                # Rare hard anomalies: High Speed / Breach / Night (no Erratic here)
                 choices = ['High Speed', 'Geofence Breach']
                 has_zone = (
                     animal.get('zone_lat') is not None
@@ -2732,11 +2880,13 @@ def live_gps_tick():
                             placed = True
                             break
                     if not placed:
-                        lat, lon = _offset_meters(zlat, zlon, zr * 1.35, random.uniform(0, 2 * math.pi))
+                        lat, lon = _offset_meters(
+                            zlat, zlon, zr * 1.35, random.uniform(0, 2 * math.pi)
+                        )
                     speed = random.uniform(1, 6)
 
-            # Keep normal movement inside the farm fence
-            if forced_type is None and geofence and not is_inside_farm(lat, lon, geofence):
+            # Keep normal + erratic movement inside the farm fence
+            if forced_type in (None, 'Erratic Movement') and geofence and not is_inside_farm(lat, lon, geofence):
                 heading = (heading + math.pi) % (2 * math.pi)
                 step_back = random.uniform(3, 12)
                 lat, lon = _offset_meters(last_lat, last_lon, step_back, heading)
@@ -2744,12 +2894,22 @@ def live_gps_tick():
                     lat, lon = last_lat, last_lon
                     speed = random.uniform(0.0, 0.3)
 
+            heading_variance = _update_heading_variance(aid, prev_heading, heading)
             _LIVE_HEADING[aid] = heading
 
             is_anom, anom_type, _dist = _classify_live_point(
                 lat, lon, speed, geofence, farm_lat, farm_lon, raw_radius,
-                is_nighttime, animal, sim_hour,
+                is_nighttime, animal, sim_hour, heading_variance=heading_variance,
             )
+
+            # After an erratic episode ends, wipe turn history so the rolling mean
+            # does not keep flagging Erratic for several normal ticks afterward.
+            if (
+                forced_type == 'Erratic Movement'
+                and _LIVE_ERRATIC_STREAK.get(aid, 0) <= 0
+            ):
+                _LIVE_HEADING_HISTORY[aid] = []
+                _LIVE_ERRATIC_ALERTED.discard(aid)
 
             cursor.execute("""
                 INSERT INTO gps_tracking
@@ -2771,9 +2931,17 @@ def live_gps_tick():
                 'speed_kmh': round(speed, 2),
                 'is_anomaly': is_anom,
                 'anomaly_type': anom_type if is_anom else None,
+                'heading_variance': round(heading_variance, 4),
             })
 
             if is_anom:
+                # One alert (+ email) per Erratic episode — not every zig-zag tick
+                if (
+                    anom_type == 'Erratic Movement'
+                    and aid in _LIVE_ERRATIC_ALERTED
+                ):
+                    continue
+
                 alert_msg = (
                     f"🚨 {animal['animal_tag']} - {anom_type} detected! "
                     f"Speed: {speed:.1f} km/h"
@@ -2785,8 +2953,14 @@ def live_gps_tick():
                     VALUES (%s,%s,%s,%s,'Critical',%s,%s) RETURNING alert_id
                 """, (request.user_id, aid, anom_type, alert_msg, lat, lon))
                 alert_id = cursor.fetchone()['alert_id']
-                # Email only for serious events (avoid spam every 5s)
-                if anom_type in ('Geofence Breach', 'High Speed'):
+                if anom_type == 'Erratic Movement':
+                    _LIVE_ERRATIC_ALERTED.add(aid)
+
+                # Email for all theft-related anomaly types
+                if anom_type in (
+                    'Geofence Breach', 'High Speed',
+                    'Erratic Movement', 'Night Movement',
+                ):
                     cursor.execute(
                         "SELECT email FROM users WHERE user_id=%s", (request.user_id,)
                     )
@@ -2897,7 +3071,7 @@ def export_tracking_csv():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
-# ============ BREED IDENTIFICATION (Module #4) ============
+# ============ BREED IDENTIFICATION ============
 # Model: breed_id/models/breed_classifier.onnx (runs on Python 3.14 via onnxruntime).
 # Fallback: proxy to BREED_SERVICE_URL if local load fails.
 
@@ -3092,28 +3266,150 @@ def get_tracking_alerts():
 @app.route('/api/tracking/alerts/<int:alert_id>/resolve', methods=['PUT'])
 @role_required(['farmer', 'admin'])
 def resolve_tracking_alert(alert_id):
-    """Mark an alert as resolved."""
+    """
+    Mark an alert as resolved.
+
+    Night Movement / Geofence Breach / High Speed:
+      return animal to its zone (or farm fence) + normal GPS ping (green).
+    Erratic Movement:
+      keep current position; write a normal GPS ping so the node goes green.
+    """
+    global _LIVE_HEADING, _LIVE_HEADING_HISTORY, _LIVE_ERRATIC_STREAK, _LIVE_ERRATIC_ALERTED
     conn = get_db()
     if not conn:
         return jsonify({'status': 'error', 'message': 'Database error'}), 500
+
+    REPOSITION_TYPES = {'Night Movement', 'Geofence Breach', 'High Speed'}
+    STAY_PUT_TYPES = {'Erratic Movement'}
+
     try:
-        cursor = conn.cursor()
+        ensure_geofences_schema(conn)
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT alert_id, animal_id, alert_type, is_resolved
+            FROM alerts
+            WHERE alert_id = %s AND user_id = %s
+        """, (alert_id, request.user_id))
+        alert = cursor.fetchone()
+        if not alert:
+            cursor.close(); conn.close()
+            return jsonify({'status': 'error', 'message': 'Alert not found'}), 404
+
         cursor.execute("""
             UPDATE alerts
             SET is_resolved = TRUE
             WHERE alert_id = %s AND user_id = %s
-            RETURNING alert_id
-        """, (alert_id, request.user_id,))
-        row = cursor.fetchone()
-        if not row:
-            cursor.close(); conn.close()
-            return jsonify({'status': 'error', 'message': 'Alert not found'}), 404
+        """, (alert_id, request.user_id))
+
+        repositioned = False
+        cleared_normal = False
+        new_lat = new_lon = None
+        animal_id = alert.get('animal_id')
+        alert_type = (alert.get('alert_type') or '').strip()
+
+        if animal_id and alert_type in (REPOSITION_TYPES | STAY_PUT_TYPES):
+            cursor.execute("""
+                SELECT a.animal_id, a.last_latitude, a.last_longitude,
+                       z.center_latitude, z.center_longitude, z.radius_meters
+                FROM animals a
+                LEFT JOIN zones z ON a.zone_id = z.zone_id
+                WHERE a.animal_id = %s AND a.user_id = %s AND a.status = 'Active'
+            """, (animal_id, request.user_id))
+            animal = cursor.fetchone()
+
+            if animal:
+                lat = lon = None
+
+                if alert_type in REPOSITION_TYPES:
+                    geofence = fetch_user_geofence(cursor, request.user_id)
+                    geo = farm_geometry(geofence)
+                    geofence_radius = geo['radius']
+
+                    if animal.get('center_latitude') is not None:
+                        clat = float(animal['center_latitude'])
+                        clon = float(animal['center_longitude'])
+                        zr = float(animal['radius_meters'] or 200)
+                        if is_inside_farm(clat, clon, geofence, circle_margin=0.85):
+                            for _ in range(14):
+                                ang = random.uniform(0, 2 * math.pi)
+                                d = random.uniform(
+                                    0, min(zr * 0.55, max(geofence_radius * 0.35, 40))
+                                )
+                                tlat, tlon = _offset_meters(clat, clon, d, ang)
+                                if (
+                                    is_inside_farm(tlat, tlon, geofence, circle_margin=0.95)
+                                    and calculate_distance(tlat, tlon, clat, clon) <= zr * 0.95
+                                ):
+                                    lat, lon = tlat, tlon
+                                    break
+                    if lat is None:
+                        lat, lon = random_point_in_geofence(geofence)
+                    repositioned = True
+                else:
+                    # Erratic: stay where they are
+                    if (
+                        animal.get('last_latitude') is not None
+                        and animal.get('last_longitude') is not None
+                    ):
+                        lat = float(animal['last_latitude'])
+                        lon = float(animal['last_longitude'])
+                    else:
+                        geofence = fetch_user_geofence(cursor, request.user_id)
+                        lat, lon = random_point_in_geofence(geofence)
+
+                cursor.execute("""
+                    INSERT INTO gps_tracking
+                        (animal_id, latitude, longitude, speed_kmh, is_anomaly, anomaly_type)
+                    VALUES (%s,%s,%s,0,FALSE,NULL)
+                """, (animal_id, lat, lon))
+                cursor.execute("""
+                    UPDATE animals
+                    SET last_latitude=%s, last_longitude=%s
+                    WHERE animal_id=%s AND user_id=%s
+                """, (lat, lon, animal_id, request.user_id))
+
+                cursor.execute("""
+                    UPDATE alerts
+                    SET is_resolved = TRUE
+                    WHERE user_id = %s
+                      AND animal_id = %s
+                      AND alert_type = %s
+                      AND is_resolved = FALSE
+                """, (request.user_id, animal_id, alert_type))
+
+                _LIVE_HEADING.pop(animal_id, None)
+                _LIVE_HEADING_HISTORY.pop(animal_id, None)
+                _LIVE_ERRATIC_STREAK.pop(animal_id, None)
+                _LIVE_ERRATIC_ALERTED.discard(animal_id)
+
+                cleared_normal = True
+                new_lat, new_lon = lat, lon
+
         conn.commit()
         cursor.close(); conn.close()
-        return jsonify({'status': 'success', 'success': True,
-                        'message': 'Alert resolved'})
+
+        if repositioned:
+            msg = 'Alert resolved — animal returned to its zone'
+        elif cleared_normal and alert_type == 'Erratic Movement':
+            msg = 'Alert resolved — animal stayed in place (normal status)'
+        else:
+            msg = 'Alert resolved'
+
+        return jsonify({
+            'status': 'success',
+            'success': True,
+            'message': msg,
+            'repositioned': repositioned,
+            'animal_id': animal_id,
+            'latitude': new_lat,
+            'longitude': new_lon,
+        })
     except Exception as e:
         print(f'Resolve alert error: {e}')
+        try:
+            conn.rollback(); conn.close()
+        except Exception:
+            pass
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
@@ -3136,8 +3432,7 @@ def detect_anomaly():
         severity = data.get('severity', 'High')
         details = data.get('details', '')
         
-        # Here you would integrate with your anomaly_detector.py
-        # For now, we'll simulate anomaly detection
+
         anomaly_result = {
             'animal_tag': animal_tag,
             'anomaly_detected': True,

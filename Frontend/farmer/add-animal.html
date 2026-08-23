@@ -413,9 +413,10 @@
                     <div class="section-title"><span>2</span> Identity</div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Ear Tag ID <span class="required">*</span></label>
-                            <input type="text" id="animalTag" required placeholder="e.g., AG-001 or ZA-LP-001">
-                            <div class="help-text">Unique identifier for your animal</div>
+                            <label>Ear Tag ID</label>
+                            <input type="text" id="animalTag" value="Assigned automatically (e.g. AA-000)" readonly disabled
+                                   style="opacity:0.85;cursor:not-allowed">
+                            <div class="help-text">System assigns a unique global tag when you register</div>
                         </div>
                         <div class="form-group">
                             <label for="breed">Breed</label>
@@ -428,8 +429,8 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Gender</label>
-                            <select id="gender">
+                            <label>Gender <span class="required">*</span></label>
+                            <select id="gender" required>
                                 <option value="">Select</option>
                                 <option value="Male">Male (Bull / Ram / Buck)</option>
                                 <option value="Female">Female (Cow / Ewe / Doe)</option>
@@ -596,18 +597,18 @@
 
         // Form validation
         function validateForm() {
-            const animalTag = document.getElementById('animalTag').value.trim();
             const species = document.getElementById('species').value;
             const dob = document.getElementById('dateOfBirth').value;
             const purchaseDate = document.getElementById('purchaseDate').value;
             const today = todayISODate();
             
-            if (!animalTag) {
-                showToast('Please enter an Ear Tag ID', 'error');
-                return false;
-            }
             if (!species) {
                 showToast('Please select a species', 'error');
+                return false;
+            }
+            const gender = document.getElementById('gender').value;
+            if (!gender) {
+                showToast('Please select a gender', 'error');
                 return false;
             }
             if (dob && dob > today) {
@@ -650,7 +651,6 @@
             submitBtn.textContent = 'Registering...';
             
             const animalData = {
-                animal_tag: document.getElementById('animalTag').value.trim().toUpperCase(),
                 species: document.getElementById('species').value,
                 breed: document.getElementById('breed').value,
                 gender: document.getElementById('gender').value,
@@ -676,10 +676,11 @@
                 
                 if (result.status === 'success' || result.success === true) {
                     clearDraft(true);
-                    showToast('Animal registered successfully! Redirecting...', 'success');
+                    const tag = result.animal_tag ? ` Ear tag: ${result.animal_tag}.` : '';
+                    showToast(`Animal registered successfully!${tag} Redirecting...`, 'success');
                     setTimeout(() => {
                         window.location.href = 'animals.html';
-                    }, 1500);
+                    }, 1800);
                 } else {
                     showToast(result.message || 'Error registering animal', 'error');
                     submitBtn.disabled = false;
@@ -827,7 +828,6 @@
 
         function collectDraft() {
             return {
-                animalTag: document.getElementById('animalTag').value,
                 species: speciesSelect.value,
                 breed: breedInput.value,
                 gender: document.getElementById('gender').value,
@@ -863,7 +863,6 @@
                 const raw = localStorage.getItem(DRAFT_KEY);
                 if (!raw) return;
                 const d = JSON.parse(raw);
-                if (d.animalTag) document.getElementById('animalTag').value = d.animalTag;
                 if (d.gender) document.getElementById('gender').value = d.gender;
                 if (d.dateOfBirth) document.getElementById('dateOfBirth').value = d.dateOfBirth;
                 if (d.weight) document.getElementById('weight').value = d.weight;
@@ -886,7 +885,7 @@
             } catch (_) {}
         }
 
-        ['animalTag','gender','dateOfBirth','weight','colorMarkings','purchasePrice','purchaseDate','notes']
+        ['gender','dateOfBirth','weight','colorMarkings','purchasePrice','purchaseDate','notes']
             .forEach(id => {
                 document.getElementById(id)?.addEventListener('input', saveDraft);
                 document.getElementById(id)?.addEventListener('change', saveDraft);

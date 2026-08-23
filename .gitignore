@@ -27,3 +27,8 @@ Thumbs.db
 .cursor/
 .vscode/
 *.log
+
+venv/
+.venv/
+breed_id/.venv/
+.env

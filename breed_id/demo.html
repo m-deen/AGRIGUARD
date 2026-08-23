@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Breed ID (standalone demo)</title>
+<style>
+  body{font-family:Segoe UI,sans-serif;max-width:720px;margin:40px auto;padding:0 16px;color:#111}
+  h1{color:#1D9E75}
+  .box{border:2px dashed #ccc;border-radius:12px;padding:24px;text-align:center;margin:16px 0}
+  img{max-width:100%;max-height:280px;border-radius:8px;margin-top:12px}
+  button{background:#1D9E75;color:#fff;border:0;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:600}
+  button:disabled{opacity:.5}
+  .card{border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin:10px 0;background:#f9fafb}
+  .top{border-color:#1D9E75;background:#e1f5ee}
+  .warn{color:#b45309;font-size:14px}
+  .err{color:#b91c1c}
+  pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto;font-size:12px}
+</style>
+</head>
+<body>
+  <h1>🧬 Breed Identification (standalone)</h1>
+  <p>Separate from AgriGuard main app — for testing your <code>.h5</code> model + pipeline.</p>
+
+  <div class="box">
+    <input type="file" id="file" accept="image/jpeg,image/png"/>
+    <div><img id="prev" style="display:none"/></div>
+    <p style="margin-top:12px"><button id="btn" disabled>Identify Breed</button></p>
+  </div>
+
+  <div id="out"></div>
+  <h3>Raw JSON</h3>
+  <pre id="raw">{}</pre>
+
+<script>
+const file = document.getElementById('file');
+const btn = document.getElementById('btn');
+const prev = document.getElementById('prev');
+let selected = null;
+
+file.onchange = () => {
+  selected = file.files[0] || null;
+  btn.disabled = !selected;
+  if (selected) {
+    prev.src = URL.createObjectURL(selected);
+    prev.style.display = 'block';
+  }
+};
+
+btn.onclick = async () => {
+  if (!selected) return;
+  btn.disabled = true;
+  btn.textContent = 'Identifying…';
+  const fd = new FormData();
+  fd.append('image', selected);
+  try {
+    const r = await fetch('/api/breed/identify', { method: 'POST', body: fd });
+    const d = await r.json();
+    document.getElementById('raw').textContent = JSON.stringify(d, null, 2);
+    const out = document.getElementById('out');
+    if (!d.success) {
+      out.innerHTML = `<p class="err">${d.error || 'Failed'}</p>`;
+      return;
+    }
+    out.innerHTML = (d.predictions || []).map((p, i) => `
+      <div class="card ${i===0?'top':''}">
+        <strong>#${i+1} ${p.breed}</strong> — ${p.confidence_percent}%
+      </div>`).join('') +
+      (d.low_confidence_warning ? `<p class="warn">Low confidence — try a clearer livestock photo.</p>` : '') +
+      (d.care_recommendations ? `<div class="card"><strong>Care tips (${d.predictions[0].breed})</strong><br>
+        Feeding: ${d.care_recommendations.feeding_guidelines || '—'}<br>
+        Housing: ${d.care_recommendations.housing_requirements || '—'}<br>
+        Health: ${d.care_recommendations.health_tips || '—'}</div>` : '') +
+      `<p style="color:#6b7280;font-size:13px">Inference: ${d.inference_time_seconds}s</p>`;
+  } catch (e) {
+    document.getElementById('out').innerHTML = `<p class="err">Network error — is standalone_app.py running?</p>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Identify Breed';
+  }
+};
+</script>
+</body>
+</html>

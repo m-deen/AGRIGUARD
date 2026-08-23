@@ -605,8 +605,9 @@
             </div>
             <form id="addAnimalForm">
                 <div class="form-group">
-                    <label>Ear Tag ID <span class="required">*</span></label>
-                    <input type="text" id="animalTag" required placeholder="e.g., AG-001">
+                    <label>Ear Tag ID</label>
+                    <input type="text" id="animalTag" value="Assigned automatically (e.g. AA-000)" readonly disabled>
+                    <div class="help-text" style="font-size:12px;color:#6b7280;margin-top:4px;">System assigns a unique global tag on save</div>
                 </div>
                 <div class="form-group">
                     <label>Species <span class="required">*</span></label>
@@ -624,8 +625,8 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Gender</label>
-                    <select id="gender">
+                    <label>Gender <span class="required">*</span></label>
+                    <select id="gender" required>
                         <option value="">Select</option>
                         <option value="Male">♂ Male</option>
                         <option value="Female">♀ Female</option>
@@ -655,8 +656,9 @@
             <form id="editAnimalForm">
                 <input type="hidden" id="editAnimalId">
                 <div class="form-group">
-                    <label>Ear Tag ID <span class="required">*</span></label>
-                    <input type="text" id="editAnimalTag" required placeholder="e.g., AG-001">
+                    <label>Ear Tag ID</label>
+                    <input type="text" id="editAnimalTag" readonly disabled>
+                    <div class="help-text" style="font-size:12px;color:#6b7280;margin-top:4px;">Assigned by the system — cannot be changed</div>
                 </div>
                 <div class="form-group">
                     <label>Species <span class="required">*</span></label>
@@ -674,8 +676,8 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Gender</label>
-                    <select id="editGender">
+                    <label>Gender <span class="required">*</span></label>
+                    <select id="editGender" required>
                         <option value="">Select</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
@@ -953,6 +955,17 @@
         async function addAnimal(event) {
             event.preventDefault();
 
+            const species = document.getElementById('species').value;
+            if (!species) {
+                showToast('Please select a species', true);
+                return;
+            }
+            const gender = document.getElementById('gender').value;
+            if (!gender) {
+                showToast('Please select a gender', true);
+                return;
+            }
+
             const dob = document.getElementById('dateOfBirth').value || null;
             if (isFutureDate(dob)) {
                 showToast('Date of birth cannot be in the future', true);
@@ -970,10 +983,9 @@
             submitBtn.textContent = 'Adding...';
             
             const animalData = {
-                animal_tag: document.getElementById('animalTag').value.trim(),
-                species: document.getElementById('species').value,
+                species: species,
                 breed: document.getElementById('breed').value,
-                gender: document.getElementById('gender').value,
+                gender: gender,
                 weight_kg: weightRaw === '' ? null : parseFloat(weightRaw),
                 date_of_birth: dob
             };
@@ -991,10 +1003,12 @@
                 const result = await response.json();
                 
                 if (result.status === 'success' || result.success === true) {
-                    showToast('Animal added successfully!');
+                    const tag = result.animal_tag ? ` Ear tag: ${result.animal_tag}` : '';
+                    showToast(`Animal added successfully!${tag}`);
                     closeAddModal();
                     loadAnimals();
                     document.getElementById('addAnimalForm').reset();
+                    document.getElementById('animalTag').value = 'Assigned automatically (e.g. AA-000)';
                 } else {
                     showToast(result.message || 'Error adding animal', true);
                 }
@@ -1046,6 +1060,17 @@
             const animalId = document.getElementById('editAnimalId').value;
             if (!animalId) return;
 
+            const species = document.getElementById('editSpecies').value;
+            if (!species) {
+                showToast('Please select a species', true);
+                return;
+            }
+            const gender = document.getElementById('editGender').value;
+            if (!gender) {
+                showToast('Please select a gender', true);
+                return;
+            }
+
             const dob = document.getElementById('editDateOfBirth').value || null;
             if (isFutureDate(dob)) {
                 showToast('Date of birth cannot be in the future', true);
@@ -1063,10 +1088,9 @@
             submitBtn.textContent = 'Saving...';
 
             const payload = {
-                animal_tag: document.getElementById('editAnimalTag').value.trim(),
-                species: document.getElementById('editSpecies').value,
+                species: species,
                 breed: document.getElementById('editBreed').value.trim(),
-                gender: document.getElementById('editGender').value,
+                gender: gender,
                 weight_kg: editWeightRaw === '' ? null : parseFloat(editWeightRaw),
                 date_of_birth: dob,
                 status: document.getElementById('editStatus').value || 'Active'

@@ -1983,8 +1983,10 @@ async function resolveAlert(id) {
       method: 'PUT', headers: { Authorization: `Bearer ${getToken()}` }
     });
     const d = await r.json();
-    if (d.status === 'success') { toast('Alert resolved '); loadAlerts(); }
-    else toast(d.message, 'err');
+    if (d.status === 'success') {
+      toast(d.message || 'Alert resolved');
+      await Promise.all([loadAlerts(), loadAnimals()]);
+    } else toast(d.message, 'err');
   } catch (e) { toast('Network error', 'err'); }
 }
 

@@ -1,0 +1,321 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{amsmath}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue
+}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  backgroundcolor=\color{gray!8},
+  columns=fullflexible
+}
+
+\title{AgriGuard Hybrid Anomaly Detection Model\\
+\large Live GPS Simulation + Rules + Isolation Forest}
+\author{AgriGuard Project Notes}
+\date{15 August 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+AgriGuard's livestock-theft detector is a \textbf{hybrid} system: hard rules fire first for
+clear events (geofence breach, high speed, night movement out of zone), then an
+\textbf{Isolation Forest} (with a heading assist) catches subtler
+\textbf{Erratic Movement} such as zig-zag paths that still look normal on speed and fence alone.
+Live tracking feeds the detector one simulated GPS collar ping per active animal about every
+5~seconds. There are no physical collars; the backend invents constrained movement to mimic
+a star (hub-and-spoke) reporting topology.
+\end{abstract}
+
+\tableofcontents
+\vspace{1em}
+
+%----------------------------------------------------------------------
+\section{Big picture}
+%----------------------------------------------------------------------
+
+\begin{lstlisting}
+Farmer browser (tracking.html)
+        |  every 5s: POST /api/tracking/live-tick
+        v
+Flask invents next collar ping (simulation)
+        |
+        v
+Rules in live-tick  -->  Geofence Breach / High Speed / Night Movement
+        | (if none of those)
+        v
+AnomalyDetector.predict()  -->  Isolation Forest + heading assist
+        |
+        v
+gps_tracking + alerts (+ email for breach/speed only)
+\end{lstlisting}
+
+\noindent
+Each animal is scored \textbf{independently} (per animal, per ping)---not by a herd vote.
+
+%----------------------------------------------------------------------
+\section{What one ping looks like}
+%----------------------------------------------------------------------
+
+Each live-tick, for every \textbf{Active} animal of the logged-in farmer:
+
+\begin{enumerate}[leftmargin=*]
+  \item Start from last latitude/longitude (or place inside fence/zone).
+  \item Choose behaviour: rest / graze / walk / rare anomaly.
+  \item Compute new latitude, longitude, and speed.
+  \item Update heading and the rolling \textbf{mean turn size} over recent ticks.
+  \item Classify the ping (rules, then ML).
+  \item Insert into \texttt{gps\_tracking}; update \texttt{animals.last\_latitude/longitude}.
+  \item If anomalous, create an \texttt{alerts} row.
+\end{enumerate}
+
+%----------------------------------------------------------------------
+\section{Simulation behaviour}
+%----------------------------------------------------------------------
+
+The UI calls \texttt{POST /api/tracking/live-tick} about every \textbf{5 seconds}
+while Live Tracking is on.
+
+\begin{center}
+\begin{tabular}{@{}llp{7.2cm}@{}}
+\toprule
+\textbf{Behaviour} & \textbf{Chance} & \textbf{What it does} \\
+\midrule
+Rest    & $\sim$25\% & Almost no move, $\approx 0$~km/h \\
+Graze   & $\sim$55\% & Small step (cattle $\sim$3--15~m), slow \\
+Walk    & $\sim$15\% & Larger step, still under $\sim$4--4.5~km/h \\
+Anomaly & $\sim$5\%  & High Speed, Geofence Breach, Erratic,
+                       or Night (if Night Mode + assigned zone) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Normal moves.}
+Forced to stay \textbf{inside} the farm geofence (polygon preferred; circle fallback).
+
+\paragraph{Erratic Movement (simulation).}
+\begin{itemize}[leftmargin=*]
+  \item Starts a multi-tick zig-zag streak (2--5 further ticks).
+  \item Each tick: large left/right turn ($\sim$90$^\circ$--160$^\circ$).
+  \item Speed stays \textbf{under 8~km/h} and path stays \textbf{inside the fence}.
+  \item Therefore rules P1--P3 do not fire; ML / heading must catch it.
+\end{itemize}
+
+Heading memory keeps successive steps roughly continuous (not teleporting).
+
+%----------------------------------------------------------------------
+\section{The four ML features}
+%----------------------------------------------------------------------
+
+Every Isolation Forest call uses a 4-dimensional feature vector:
+
+\begin{center}
+\begin{tabular}{@{}clp{8cm}@{}}
+\toprule
+\# & \textbf{Feature} & \textbf{Meaning} \\
+\midrule
+1 & \texttt{speed} & Movement speed in km/h \\
+2 & \texttt{hour} & Hour of day 0--23
+  (simulation: Night Mode $\rightarrow$ 22; day $\rightarrow$ 12) \\
+3 & \texttt{distance\_from\_center} & Metres from farm centre
+  (helper for circle/ML geometry) \\
+4 & \texttt{heading\_variance} & Rolling \textbf{mean} of recent turn sizes
+  (radians)---despite the name \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Heading feature (mean turn size)}
+\begin{itemize}[leftmargin=*]
+  \item Each tick: absolute turn angle between previous and new heading.
+  \item Keep the last \textbf{5} turns per animal.
+  \item Feature value $=$ \textbf{mean} of those turns (not standard deviation).
+\end{itemize}
+
+\paragraph{Why mean, not standard deviation?}
+\begin{itemize}[leftmargin=*]
+  \item Grazing drifts a little $\Rightarrow$ mean $\approx$ \textbf{0.1--0.4}.
+  \item Erratic keeps making huge turns $\Rightarrow$ mean $\approx$ \textbf{1.8--2.8}.
+  \item Std-dev of ``all large but similar turns'' can stay low and hide zig-zag.
+\end{itemize}
+
+(The parameter is still named \texttt{heading\_variance} in code for compatibility;
+the numeric value is mean turn size.)
+
+%----------------------------------------------------------------------
+\section{Detection priority (hybrid stack)}
+%----------------------------------------------------------------------
+
+The same priority appears in live-tick classification and in
+\texttt{AnomalyDetector.predict()}:
+
+\subsection{P1 --- Geofence Breach}
+\begin{itemize}[leftmargin=*]
+  \item Live path: point outside farm polygon/circle (\texttt{is\_inside\_farm}).
+  \item Detector fallback: distance $>$ radius $\times 1.1$.
+\end{itemize}
+Most objective signal: the animal left the farm.
+
+\subsection{P2 --- High Speed}
+Speed $> 8$~km/h. Physics-based: faster than normal graze/walk.
+
+\subsection{P3 --- Night Movement}
+Night \textbf{and} outside the animal's assigned \textbf{zone}
+(not merely ``any night movement''). In the demo, Night Mode UI drives night hour.
+
+\subsection{P4 --- ML + heading assist}
+Only if P1--P3 did not fire:
+\begin{enumerate}[leftmargin=*]
+  \item Run Isolation Forest on the four features.
+  \item If forest predicts outlier (\texttt{predict == -1}) $\rightarrow$
+        \textbf{Erratic Movement}.
+  \item Else if mean turn $\geq 1.2$ $\rightarrow$ \textbf{Erratic Movement}
+        (demo-reliable assist).
+\end{enumerate}
+
+So Erratic is the main ML job: a weird path that still looks fine on speed and fence.
+
+%----------------------------------------------------------------------
+\section{Isolation Forest (the ML component)}
+%----------------------------------------------------------------------
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Property} & \textbf{Value} \\
+\midrule
+Library & \texttt{sklearn.ensemble.IsolationForest} \\
+Trees (\texttt{n\_estimators}) & 100 \\
+Contamination & 0.15 ($\sim$15\% of space treated as outliers) \\
+Random state & 42 (reproducible) \\
+Saved model & \texttt{Backend/ml/models/anomaly\_model\_v2.pkl} \\
+Source module & \texttt{Backend/ml/anomaly\_detector.py} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Idea}
+Isolation trees randomly partition the feature space. Outliers are easier to isolate
+and receive more anomalous scores. Fitting is \textbf{unsupervised} (no class labels).
+
+\subsection{Synthetic training set (1000 samples)}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{700 normal:} daytime, slow speed, inside fence, small mean turns.
+  \item \textbf{300 anomaly-shaped} rows (to enrich the space):
+        high speed / night hours / large distance / \textbf{high mean turn (erratic)}.
+\end{itemize}
+
+\subsection{Predict outputs}
+\begin{itemize}[leftmargin=*]
+  \item $+1$ --- looks normal.
+  \item $-1$ --- outlier $\rightarrow$ labelled \textbf{Erratic Movement} in the API.
+  \item \texttt{score\_samples} --- anomaly score (more negative $\approx$ more anomalous).
+\end{itemize}
+
+\subsection{Caveat}
+Putting anomaly-like rows into Isolation Forest training is somewhat unusual
+(the algorithm assumes mostly normal data). In practice, rules catch breach / speed / night;
+the forest plus assist mainly separate \textbf{smooth vs zig-zag} via the heading feature.
+
+\subsection{Startup}
+\texttt{ensure\_ready()} \textbf{loads} \texttt{anomaly\_model\_v2.pkl} if present;
+it trains only when the file is missing (does not retrain on every Flask boot).
+
+%----------------------------------------------------------------------
+\section{End-to-end example}
+%----------------------------------------------------------------------
+
+Animal zig-zagging inside the fence at about 4~km/h:
+
+\begin{enumerate}[leftmargin=*]
+  \item Simulation picks or continues an Erratic streak $\rightarrow$ large turn, short step.
+  \item Mean turn over recent ticks climbs toward $\sim$2.
+  \item Live rules: inside fence, speed $< 8$, not night/out-of-zone $\rightarrow$ pass.
+  \item Call
+        \texttt{predict(speed=4, hour=12, distance=300, heading\_variance=2.1)}.
+  \item Detector rules P1--P3 also pass.
+  \item Forest and/or assist ($\geq 1.2$) $\rightarrow$ \textbf{Erratic Movement}.
+  \item Insert \texttt{gps\_tracking} with \texttt{is\_anomaly=true}.
+  \item Create alert; \textbf{no email} (email only for Breach / High Speed).
+\end{enumerate}
+
+\paragraph{UI note.}
+Map marker red $=$ latest ping's \texttt{is\_anomaly} only (clears on next normal ping).
+An alert stays Active until the farmer resolves it.
+
+%----------------------------------------------------------------------
+\section{Alert types}
+%----------------------------------------------------------------------
+
+\begin{center}
+\begin{tabular}{@{}lp{9cm}@{}}
+\toprule
+\textbf{Type} & \textbf{Typical cause} \\
+\midrule
+Geofence Breach   & Outside farm fence \\
+High Speed        & Speed $> 8$~km/h \\
+Night Movement    & Night Mode on and outside assigned zone \\
+Erratic Movement  & Zig-zag / high mean turn (ML + assist) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%----------------------------------------------------------------------
+\section{Networking topology}
+%----------------------------------------------------------------------
+
+AgriGuard mimics a \textbf{star (hub-and-spoke)} topology:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Hub:} AgriGuard Flask API (stores GPS, runs rules + ML).
+  \item \textbf{Spokes:} each animal's simulated collar reports independently.
+  \item Not mesh and not peer-to-peer: animals do not communicate with each other.
+  \item Transport in the demo: REST polling (\texttt{live-tick}), not WebSockets.
+\end{itemize}
+
+%----------------------------------------------------------------------
+\section{Key files}
+%----------------------------------------------------------------------
+
+\begin{center}
+\begin{tabular}{@{}lp{8.5cm}@{}}
+\toprule
+\textbf{Path} & \textbf{Role} \\
+\midrule
+\texttt{Backend/ml/anomaly\_detector.py}
+  & Rules + Isolation Forest v2 \\
+\texttt{Backend/ml/models/anomaly\_model\_v2.pkl}
+  & Saved forest \\
+\texttt{Backend/app.py} (live-tick section)
+  & Simulation, heading mean, classify, DB, alerts \\
+\texttt{Frontend/farmer/tracking.html}
+  & Map UI, Live Tracking, Night Mode \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%----------------------------------------------------------------------
+\section{One-line summary}
+%----------------------------------------------------------------------
+
+\textbf{Simulate realistic GPS $\rightarrow$ rules for clear theft signals $\rightarrow$
+Isolation Forest + mean heading for erratic paths that look ``normal'' on speed and fence alone.}
+
+\end{document}

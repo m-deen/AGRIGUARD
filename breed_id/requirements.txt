@@ -1,0 +1,12 @@
+# Preferred on Python 3.14 (AgriGuard main venv) — no TensorFlow needed:
+onnxruntime>=1.25.0
+Pillow>=10.0.0
+numpy>=1.24.0
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# Optional (Python 3.13 breed_id/.venv only) — original .h5 / training helpers:
+# tensorflow>=2.20
+# tf2onnx
+# icrawler>=0.6.6
+

@@ -1,0 +1,11 @@
+{
+  "note": "Order matches image_dataset_from_directory class_names / softmax index.",
+  "labels": [
+    "Afrikaner",
+    "Boer Goat",
+    "Bonsmara",
+    "Dorper",
+    "Nguni"
+  ],
+  "preprocess": "mobilenet_v2.preprocess_input (RGB float -> scale to [-1, 1])"
+}
