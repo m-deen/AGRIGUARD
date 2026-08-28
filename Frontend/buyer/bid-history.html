@@ -239,7 +239,7 @@
         <div class="nav-links">
             <a href="dashboard.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Dashboard</a>
             <a href="auctions.html"> <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14l-4 4M14 4l6 6M4.5 16.5L9 12l7-7 3 3-7 7-4.5 4.5zM13 19h8"/></svg> Browse Auctions</a>
-            <a href="bid-history.html" class="active">📜 My Bids</a>
+            <a href="bid-history.html" class="active">My Bids</a>
             <a href="watchlist.html"> <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.1 6.3L22 9.3l-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg> Watchlist</a>
         </div>
         <button class="logout-btn" onclick="logout()">Logout</button>
@@ -291,97 +291,75 @@
 
     <div id="toast" class="toast"></div>
 
+    <script src="../js/auction-store.js"></script>
     <script>
-        const API_BASE = 'http://localhost:5000';
         let currentTab = 'all';
-        
-        // Demo bid data - replace with API call when ready
-        let bids = [
-            { id: 1, auction_title: 'Nguni Bull - 4 years', auction_id: 1, amount: 8500, bid_date: '2026-05-03', status: 'active', species: 'Cattle' },
-            { id: 2, auction_title: 'Bonsmara Cow', auction_id: 2, amount: 7800, bid_date: '2026-05-02', status: 'outbid', species: 'Cattle' },
-            { id: 3, auction_title: 'Boer Goat Buck', auction_id: 3, amount: 3200, bid_date: '2026-04-28', status: 'won', species: 'Goat' },
-            { id: 4, auction_title: 'Dorper Ewe', auction_id: 4, amount: 2800, bid_date: '2026-04-25', status: 'won', species: 'Sheep' },
-            { id: 5, auction_title: 'Angus Steer', auction_id: 5, amount: 5500, bid_date: '2026-04-20', status: 'lost', species: 'Cattle' }
-        ];
-        
+
         function getToken() { return localStorage.getItem('agriguard_token'); }
-        
-        function getUser() {
-            const user = localStorage.getItem('agriguard_user');
-            return user ? JSON.parse(user) : null;
-        }
-        
-        function showToast(message, isError = false) {
+
+        function showToast(message, isError) {
             const toast = document.getElementById('toast');
             toast.textContent = message;
-            toast.style.background = isError ? '#ef4444' : '#1D9E75';
+            toast.style.background = isError ? '#B42318' : '#1D9E75';
             toast.style.display = 'block';
             setTimeout(() => toast.style.display = 'none', 8000);
         }
-        
+
         function logout() {
             localStorage.removeItem('agriguard_token');
             localStorage.removeItem('agriguard_user');
             localStorage.removeItem('agriguard_role');
             window.location.href = '../login.html';
         }
-        
+
         function requireLogin() {
-            if (!getToken()) {
-                window.location.href = '../login.html';
-            }
+            if (!getToken()) window.location.href = '../login.html';
         }
-        
+
+        function bids() {
+            return AgriAuction.myBids();
+        }
+
         function updateStats() {
-            const total = bids.length;
-            const active = bids.filter(b => b.status === 'active').length;
-            const won = bids.filter(b => b.status === 'won').length;
-            const lost = bids.filter(b => b.status === 'lost' || b.status === 'outbid').length;
-            
-            document.getElementById('totalBids').textContent = total;
-            document.getElementById('activeBids').textContent = active;
-            document.getElementById('winningBids').textContent = won;
-            document.getElementById('lostBids').textContent = lost;
+            const all = bids();
+            document.getElementById('totalBids').textContent = all.length;
+            document.getElementById('activeBids').textContent = all.filter(b => b.status === 'active').length;
+            document.getElementById('winningBids').textContent = all.filter(b => b.status === 'won').length;
+            document.getElementById('lostBids').textContent = all.filter(b => b.status === 'lost' || b.status === 'outbid').length;
         }
-        
+
         function getStatusBadge(status) {
             const badges = {
-                'active': '<span class="badge badge-active">Active</span>',
+                'active': '<span class="badge badge-active">Leading</span>',
                 'won': '<span class="badge badge-winning">Won</span>',
                 'lost': '<span class="badge badge-lost">Lost</span>',
                 'outbid': '<span class="badge badge-lost">Outbid</span>'
             };
             return badges[status] || '<span class="badge">Unknown</span>';
         }
-        
+
         function renderBids() {
-            let filtered = bids;
-            
-            if (currentTab === 'active') {
-                filtered = bids.filter(b => b.status === 'active');
-            } else if (currentTab === 'won') {
-                filtered = bids.filter(b => b.status === 'won');
-            } else if (currentTab === 'lost') {
-                filtered = bids.filter(b => b.status === 'lost' || b.status === 'outbid');
-            }
-            
+            let filtered = bids();
+            if (currentTab === 'active') filtered = filtered.filter(b => b.status === 'active');
+            else if (currentTab === 'won') filtered = filtered.filter(b => b.status === 'won');
+            else if (currentTab === 'lost') filtered = filtered.filter(b => b.status === 'lost' || b.status === 'outbid');
+
             const container = document.getElementById('bidsTable');
-            
             if (filtered.length === 0) {
-                container.innerHTML = '<div class="empty-state"> No bids found</div>';
+                container.innerHTML = '<div class="empty-state">No bids found. Place a bid from Timed Auctions.</div>';
                 return;
             }
-            
+
             container.innerHTML = `
                 <table>
                     <thead>
                         <tr>
-                            <th>Auction</th>
+                            <th>Lot</th>
                             <th>Species</th>
-                            <th>Bid Amount</th>
+                            <th>Your bid</th>
                             <th>Date</th>
                             <th>Status</th>
-                            <th>Action</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -389,13 +367,13 @@
                             <tr>
                                 <td><strong>${bid.auction_title}</strong></td>
                                 <td>${bid.species}</td>
-                                <td><strong>R${bid.amount.toLocaleString()}</strong></td>
+                                <td><strong>R${Number(bid.amount).toLocaleString()}</strong></td>
                                 <td>${bid.bid_date}</td>
                                 <td>${getStatusBadge(bid.status)}</td>
                                 <td>
-                                    ${bid.status === 'active' ? 
-                                        `<button onclick="viewAuction(${bid.auction_id})" style="padding: 6px 12px; background: #1D9E75; color: white; border: none; border-radius: 6px; cursor: pointer;">View Auction</button>` : 
-                                        '-'}
+                                    ${bid.status === 'active' || bid.status === 'outbid'
+                                        ? `<button onclick="viewAuction(${bid.auction_id})" style="padding: 6px 12px; background: #1D9E75; color: white; border: none; border-radius: 6px; cursor: pointer;">View lot</button>`
+                                        : '-'}
                                 </td>
                             </tr>
                         `).join('')}
@@ -403,21 +381,18 @@
                 </table>
             `;
         }
-        
+
         function switchTab(tab) {
             currentTab = tab;
-            document.querySelectorAll('.tab').forEach((t, i) => {
-                t.classList.remove('active');
-            });
-            event.target.classList.add('active');
+            document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
+            if (event && event.target) event.target.classList.add('active');
             renderBids();
         }
-        
+
         function viewAuction(auctionId) {
             window.location.href = `auctions.html?id=${auctionId}`;
         }
-        
-        // Initialize
+
         requireLogin();
         updateStats();
         renderBids();

@@ -1,446 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgriGuard - Timed Auctions</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="../css/agriguard-theme.css"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgriGuard - Auction Marketplace</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: "Source Sans 3", system-ui, sans-serif;
-            background: #F7F4EE;
-        }
-        
-        /* Navbar */
-        .navbar {
-            background: white;
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 10px 30px rgba(15,110,86,.06);
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        
-        .logo {
-            font-size: 22px;
-            font-weight: bold;
-            color: #1D9E75;
-            font-family: "Fraunces", Georgia, serif;
-        }
-        
-        .nav-links {
-            display: flex;
-            gap: 5px;
-            flex-wrap: wrap;
-        }
-        
-        .nav-links a {
-            border-radius: 999px;
-            text-decoration: none;
-            color: #374151;
-            padding: 8px 14px;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-        
-        .nav-links a:hover {
-            background: #f3f4f6;
-        }
-        
-        .nav-links a.active {
-            background: #E1F5EE;
-            color: #1D9E75;
-            border: none;
-            border-radius: 999px;
-        }
-        
-        .logout-btn {
-            background: transparent;
-            color: #B42318;
-            border: 1px solid #E8C4C0;
-            padding: 8px 18px;
-            border-radius: 999px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 700;
-        }
-        
-        .logout-btn:hover {
-            background: #FCE8E6;
-        }
-        
-        /* Container */
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 30px;
-        }
-        
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        
-        .page-header h1 {
-            font-size: 28px;
-            color: #111827;
-        }
-        
-        .page-header p {
-            color: #6b7280;
-            margin-top: 5px;
-        }
-        
-        /* Buttons */
-        .btn-primary {
-            background: #1D9E75;
-            color: white;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-        
-        .btn-primary:hover {
-            background: #0F6E56;
-            transform: translateY(-1px);
-        }
-        
-        .btn-secondary {
-            background: #f3f4f6;
-            color: #374151;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-        
-        .btn-secondary:hover {
-            background: #e5e7eb;
-        }
-        
-        .btn-full {
-            width: 100%;
-        }
-        
-        /* Card */
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(15,110,86,.06);
-            border: 1px solid #E5E1D8;
-        }
-        
-        .card-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 15px;
-        }
-        
-        /* Form */
-        .form-group {
-            margin-bottom: 15px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 600;
-            color: #374151;
-            font-size: 13px;
-        }
-        
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-        
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #1D9E75;
-            box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.1);
-        }
-        
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-        
-        /* Filter Bar */
-        .filter-bar {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .filter-bar input,
-        .filter-bar select {
-            flex: 1;
-            min-width: 150px;
-            padding: 10px 14px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-        
-        /* Auction Layout */
-        .auction-layout {
-            display: grid;
-            grid-template-columns: 1fr 380px;
-            gap: 20px;
-        }
-        
-        /* Listing Card */
-        .listing-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: white;
-        }
-        
-        .listing-card:hover {
-            border-color: #1D9E75;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        
-        .listing-card.active {
-            border: 2px solid #1D9E75;
-            background: #E1F5EE;
-        }
-        
-        .listing-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 10px;
-        }
-        
-        .listing-title {
-            font-size: 16px;
-            font-weight: 700;
-        }
-        
-        .listing-subtitle {
-            font-size: 12px;
-            color: #6b7280;
-            margin-top: 4px;
-        }
-        
-        .listing-details {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        
-        .bid-detail {
-            text-align: center;
-        }
-        
-        .bid-label {
-            font-size: 11px;
-            color: #9ca3af;
-        }
-        
-        .bid-value {
-            font-size: 18px;
-            font-weight: 800;
-        }
-        
-        .time-left {
-            font-size: 14px;
-            font-weight: 700;
-            color: #dc2626;
-        }
-        
-        /* Bid Panel */
-        .bid-panel {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            position: sticky;
-            top: 20px;
-            box-shadow: 0 10px 30px rgba(15,110,86,.06);
-            border: 1px solid #E5E1D8;
-        }
-        
-        .bid-amount-box {
-            background: #f9fafb;
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 16px;
-        }
-        
-        .bid-amount-big {
-            font-size: 36px;
-            font-weight: 800;
-            color: #111827;
-        }
-        
-        .countdown-box {
-            background: #fee2e2;
-            padding: 12px;
-            border-radius: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-        
-        .countdown-label {
-            font-size: 13px;
-            font-weight: 700;
-            color: #991b1b;
-        }
-        
-        .countdown-value {
-            font-size: 18px;
-            font-weight: 800;
-            color: #991b1b;
-        }
-        
-        .bid-history {
-            margin-top: 16px;
-        }
-        
-        .bid-history-title {
-            font-size: 12px;
-            font-weight: 700;
-            color: #6b7280;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-        }
-        
-        .bid-history-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 12px;
-            border-radius: 8px;
-            margin-bottom: 6px;
-            font-size: 13px;
-        }
-        
-        .bid-history-row.top {
-            background: #d1fae5;
-            font-weight: 700;
-        }
-        
-        .bid-history-row.other {
-            background: #f9fafb;
-        }
-        
-        /* Badge */
-        .badge {
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-        
-        .badge-active {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        
-        .alert {
-            padding: 12px;
-            border-radius: 8px;
-            margin-top: 10px;
-        }
-        
-        .alert-danger {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-        
-        .alert-success {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #6b7280;
-        }
-        
-        /* Toast */
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: #1D9E75;
-            color: white;
-            padding: 14px 24px;
-            border-radius: 10px;
-            display: none;
-            z-index: 1000;
-            font-weight: 500;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        .toast.error {
-            background: #ef4444;
-        }
-        
-        /* Create Form */
-        .create-form {
-            display: none;
-        }
-        
-        .create-form.show {
-            display: block;
-        }
-        
-        @media (max-width: 768px) {
-            .auction-layout {
-                grid-template-columns: 1fr;
-            }
-            .container {
-                padding: 15px;
-            }
-            .nav-links {
-                justify-content: center;
-            }
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+  <link rel="stylesheet" href="../css/auction-market.css"/>
 </head>
-<body>
-    <div class="navbar">
+<body class="market-page">
+<div class="navbar">
   <div class="logo"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> AgriGuard</div>
   <div class="nav-links">
     <a href="dashboard.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Dashboard</a>
@@ -457,335 +28,196 @@
     <button type="button" class="logout-btn" onclick="logout()">Logout</button>
   </div>
 </div>
-<div class="container">
-        <div class="page-header">
-            <div>
-                <h1><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14l-4 4M14 4l6 6M4.5 16.5L9 12l7-7 3 3-7 7-4.5 4.5zM13 19h8"/></svg> Auction Marketplace</h1>
-                <p>Live bidding on registered livestock</p>
-            </div>
-            <button class="btn-primary" onclick="toggleCreateForm()"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Create Listing</button>
-        </div>
 
-        <!-- Create Listing Form -->
-        <div class="card create-form" id="createForm">
-            <div class="card-title">Create New Auction Listing</div>
-            <div id="createMsg"></div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Animal *</label>
-                    <select id="cAnimal" class="form-select"></select>
-                </div>
-                <div class="form-group">
-                    <label>Starting Price (R) *</label>
-                    <input type="number" id="cPrice" class="form-input" placeholder="min R500" min="500">
-                </div>
-                <div class="form-group">
-                    <label>Duration</label>
-                    <select id="cDuration" class="form-select">
-                        <option value="1">1 day</option>
-                        <option value="3" selected>3 days</option>
-                        <option value="5">5 days</option>
-                        <option value="7">7 days</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Description</label>
-                    <input type="text" id="cDesc" class="form-input" placeholder="Brief description">
-                </div>
-            </div>
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <button class="btn-primary" onclick="createListing()">Publish Auction</button>
-                <button class="btn-secondary" onclick="toggleCreateForm()">Cancel</button>
-            </div>
-        </div>
-
-        <!-- Filter Bar -->
-        <div class="filter-bar">
-            <input type="text" id="searchListings" placeholder="🔍 Search listings..." oninput="renderListings()">
-            <select id="filterSpecies" onchange="renderListings()">
-                <option value="">All species</option>
-                <option value="Cattle"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="11" r="5"/><path d="M5 8l2 2M19 8l-2 2M8 18v2M16 18v2M9 7C7 5 5 5 4 6M15 7c2-2 4-2 5-1"/></svg> Cattle</option>
-                <option value="Goat"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14c-2.5 0-4-1.5-4-3.5S10 7 12 7s4 1.5 4 3.5S14.5 14 12 14z"/><path d="M8 8L5 4M16 8l3-4M10 18v2M14 18v2"/></svg> Goat</option>
-                <option value="Sheep"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><circle cx="7" cy="11" r="2"/><circle cx="17" cy="11" r="2"/><circle cx="9" cy="16" r="2"/><circle cx="15" cy="16" r="2"/><path d="M10 8V6M14 8V6"/></svg> Sheep</option>
-            </select>
-        </div>
-
-        <!-- Auction Layout -->
-        <div class="auction-layout">
-            <div id="listingsPanel"></div>
-            <div id="bidPanel">
-                <div class="empty-state">
-                    <div style="font-size: 48px;"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12l-8 8-9-9V3h8l9 9z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></div>
-                    <p>Select a listing on the left to place a bid</p>
-                </div>
-            </div>
-        </div>
+<div class="market-wrap">
+  <div id="catalogView">
+    <div class="market-header">
+      <div>
+        <h1>Timed Auctions</h1>
+        <p>List livestock from your herd. Lots use the same AgriGuard colours as the rest of the app.</p>
+      </div>
+      <button class="btn-primary btn-header" onclick="toggleCreateForm()">Create listing</button>
     </div>
 
-    <div id="toast" class="toast"></div>
+    <div class="create-form" id="createForm">
+      <div class="card-title">Create New Auction Listing</div>
+      <div id="createMsg"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Animal</label>
+          <select id="cAnimal" class="form-select"></select>
+        </div>
+        <div class="form-group">
+          <label>Starting price (R)</label>
+          <input type="number" id="cPrice" class="form-input" placeholder="min R500" min="500">
+        </div>
+        <div class="form-group">
+          <label>Duration</label>
+          <select id="cDuration" class="form-select">
+            <option value="1">1 day</option>
+            <option value="3" selected>3 days</option>
+            <option value="5">5 days</option>
+            <option value="7">7 days</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Yard / province</label>
+          <select id="cLocation" class="form-select">
+            <option>Free State</option>
+            <option>Mpumalanga</option>
+            <option>KwaZulu-Natal</option>
+            <option>Eastern Cape</option>
+            <option>Western Cape</option>
+            <option>Northern Cape</option>
+            <option>Limpopo</option>
+            <option>Gauteng</option>
+            <option>North West</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" id="cDesc" class="form-input" placeholder="Brief description">
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-primary btn-header" onclick="createListing()">Publish lot</button>
+        <button class="btn-secondary" onclick="toggleCreateForm()">Cancel</button>
+      </div>
+    </div>
 
-    <script>
-        const API_BASE = 'http://localhost:5000';
-        
-        function getToken() { return localStorage.getItem('agriguard_token'); }
-        function getUser() { 
-            const user = localStorage.getItem('agriguard_user');
-            return user ? JSON.parse(user) : null;
-        }
-        
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = `toast ${isError ? 'error' : ''}`;
-            toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 8000);
-        }
-        
-        function logout() {
-            localStorage.removeItem('agriguard_token');
-            localStorage.removeItem('agriguard_user');
-            localStorage.removeItem('agriguard_role');
-            window.location.href = '../login.html';
-        }
-        
-        function requireLogin() {
-            if (!getToken()) {
-                window.location.href = '../login.html';
-            }
-        }
-        
-        // Demo data
-        let demoAnimals = [
-            { animal_id: 'a1', name: 'Themba', breed: 'Nguni', species: 'Cattle', ear_tag_id: 'AG-001', birth_date: '2020-03-15' },
-            { animal_id: 'a2', name: 'Nala', breed: 'Bonsmara', species: 'Cattle', ear_tag_id: 'AG-002', birth_date: '2021-06-20' },
-            { animal_id: 'a3', name: 'Simba', breed: 'Boer Goat', species: 'Goat', ear_tag_id: 'AG-003', birth_date: '2022-01-10' }
-        ];
-        
-        let listings = [
-            { listing_id: 'l1', animal_id: 'a1', title: 'Nguni Bull - 4 years', species: 'Cattle', breed: 'Nguni', starting_price: 8000, current_bid: 8500, bid_count: 3, end_time: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), predicted_price: 9500, status: 'active', description: '' },
-            { listing_id: 'l2', animal_id: 'a2', title: 'Bonsmara Cow - 3 years', species: 'Cattle', breed: 'Bonsmara', starting_price: 7500, current_bid: 7800, bid_count: 2, end_time: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), predicted_price: 8500, status: 'active', description: '' }
-        ];
-        
-        let bids = [
-            { listing_id: 'l1', buyer: 'John D.', amount: 8500, time: new Date(Date.now() - 3600000) },
-            { listing_id: 'l1', buyer: 'Peter M.', amount: 8200, time: new Date(Date.now() - 7200000) },
-            { listing_id: 'l2', buyer: 'Sarah B.', amount: 7800, time: new Date(Date.now() - 1800000) }
-        ];
-        
-        let selected = null;
-        let countdownTimer = null;
-        
-        function getAnimalName(animalId) {
-            const animal = demoAnimals.find(a => a.animal_id === animalId);
-            return animal ? `${animal.name} (${animal.ear_tag_id})` : animalId;
-        }
-        
-        function timeLeft(endTime) {
-            const diff = new Date(endTime) - new Date();
-            if (diff <= 0) return 'Ended';
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % (86400000)) / 3600000);
-            const minutes = Math.floor((diff % 3600000) / 60000);
-            if (days > 0) return `${days}d ${hours}h`;
-            if (hours > 0) return `${hours}h ${minutes}m`;
-            return `${minutes}m`;
-        }
-        
-        function renderListings() {
-            const search = document.getElementById('searchListings').value.toLowerCase();
-            const species = document.getElementById('filterSpecies').value;
-            
-            let filtered = listings.filter(l => {
-                const matchesSearch = l.title.toLowerCase().includes(search);
-                const matchesSpecies = !species || l.species === species;
-                return matchesSearch && matchesSpecies;
-            });
-            
-            if (filtered.length === 0) {
-                document.getElementById('listingsPanel').innerHTML = '<div class="empty-state"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12l-8 8-9-9V3h8l9 9z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg> No listings found</div>';
-                return;
-            }
-            
-            document.getElementById('listingsPanel').innerHTML = filtered.map(l => `
-                <div class="listing-card ${selected?.listing_id === l.listing_id ? 'active' : ''}" onclick="selectListing('${l.listing_id}')">
-                    <div class="listing-header">
-                        <div>
-                            <div class="listing-title">${l.title}</div>
-                            <div class="listing-subtitle">${l.species} · ${l.breed}</div>
-                        </div>
-                        <span class="badge badge-active">Active</span>
-                    </div>
-                    <div class="listing-details">
-                        <div class="bid-detail">
-                            <div class="bid-label">Current bid</div>
-                            <div class="bid-value">R${l.current_bid.toLocaleString()}</div>
-                        </div>
-                        <div class="bid-detail">
-                            <div class="bid-label">Predicted</div>
-                            <div>~R${l.predicted_price.toLocaleString()}</div>
-                        </div>
-                        <div class="bid-detail">
-                            <div class="bid-label">Bids</div>
-                            <div>${l.bid_count}</div>
-                        </div>
-                        <div style="margin-left: auto;">
-                            <div class="bid-label">Closes in</div>
-                            <div class="time-left">${timeLeft(l.end_time)}</div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        function selectListing(listingId) {
-            selected = listings.find(l => l.listing_id === listingId);
-            renderListings();
-            renderBidPanel();
-            
-            if (countdownTimer) clearInterval(countdownTimer);
-            countdownTimer = setInterval(() => {
-                if (document.getElementById('countdownValue')) {
-                    document.getElementById('countdownValue').textContent = timeLeft(selected.end_time);
-                }
-                renderListings();
-            }, 1000);
-        }
-        
-        function renderBidPanel() {
-            if (!selected) return;
-            
-            const listingBids = bids.filter(b => b.listing_id === selected.listing_id);
-            const minBid = selected.current_bid + 100;
-            
-            document.getElementById('bidPanel').innerHTML = `
-                <div class="bid-panel">
-                    <div style="font-weight: 700; margin-bottom: 16px;">${selected.title}</div>
-                    <div class="bid-amount-box">
-                        <div style="font-size: 12px; color: #6b7280;">Current highest bid</div>
-                        <div class="bid-amount-big">R${selected.current_bid.toLocaleString()}</div>
-                        <div style="font-size: 12px; color: #6b7280; margin-top: 8px;">${selected.bid_count} bids · AI estimate: R${selected.predicted_price.toLocaleString()}</div>
-                    </div>
-                    <div class="countdown-box">
-                        <span class="countdown-label">⏱ Closes in</span>
-                        <span class="countdown-value" id="countdownValue">${timeLeft(selected.end_time)}</span>
-                    </div>
-                    <div class="form-group">
-                        <label>Your bid (minimum R${minBid.toLocaleString()})</label>
-                        <input type="number" id="bidInput" class="form-input" value="${minBid}" min="${minBid}" style="font-size: 16px; font-weight: 700;">
-                    </div>
-                    <button class="btn-primary btn-full" onclick="placeBid()">Place Bid — R<span id="bidPreview">${minBid.toLocaleString()}</span></button>
-                    <div id="bidMsg"></div>
-                    <div class="bid-history">
-                        <div class="bid-history-title">📜 Bid History</div>
-                        ${listingBids.length === 0 ? '<p style="font-size: 12px; color: #6b7280;">No bids yet. Be the first!</p>' : 
-                            listingBids.slice(0, 5).map((b, i) => `
-                            <div class="bid-history-row ${i === 0 ? 'top' : 'other'}">
-                                <span>${i === 0 ? '👑 ' : ''}${b.buyer}</span>
-                                <span>R${b.amount.toLocaleString()}</span>
-                                <span>${new Date(b.time).toLocaleTimeString()}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('bidInput').addEventListener('input', function() {
-                const preview = document.getElementById('bidPreview');
-                if (preview) preview.textContent = parseFloat(this.value || 0).toLocaleString();
-            });
-        }
-        
-        function placeBid() {
-            if (!selected) return;
-            const amount = parseFloat(document.getElementById('bidInput').value);
-            const minBid = selected.current_bid + 100;
-            const msgDiv = document.getElementById('bidMsg');
-            
-            if (!amount || amount < minBid) {
-                msgDiv.innerHTML = `<div class="alert alert-danger">Minimum bid is R${minBid.toLocaleString()}</div>`;
-                return;
-            }
-            
-            // Anti-sniping: extend by 5 minutes if bid in last 5 minutes
-            const timeRemaining = new Date(selected.end_time) - new Date();
-            if (timeRemaining < 300000) {
-                selected.end_time = new Date(new Date(selected.end_time).getTime() + 300000);
-                showToast('Auction extended by 5 minutes (anti-sniping protection)');
-            }
-            
-            selected.current_bid = amount;
-            selected.bid_count++;
-            bids.unshift({ listing_id: selected.listing_id, buyer: getUser()?.first_name || 'You', amount: amount, time: new Date() });
-            
-            msgDiv.innerHTML = `<div class="alert alert-success">Bid of R${amount.toLocaleString()} placed successfully!</div>`;
-            showToast(`Bid of R${amount.toLocaleString()} placed!`);
-            
-            setTimeout(() => {
-                renderListings();
-                renderBidPanel();
-            }, 500);
-        }
-        
-        function toggleCreateForm() {
-            const form = document.getElementById('createForm');
-            form.classList.toggle('show');
-            
-            // Populate animal dropdown
-            if (form.classList.contains('show')) {
-                const select = document.getElementById('cAnimal');
-                select.innerHTML = '<option value="">Select animal</option>' + 
-                    demoAnimals.map(a => `<option value="${a.animal_id}">${a.name} — ${a.breed} (${a.ear_tag_id})</option>`).join('');
-            }
-        }
-        
-        function createListing() {
-            const animalId = document.getElementById('cAnimal').value;
-            const price = parseFloat(document.getElementById('cPrice').value);
-            const durationDays = parseInt(document.getElementById('cDuration').value);
-            const description = document.getElementById('cDesc').value;
-            const msgDiv = document.getElementById('createMsg');
-            
-            if (!animalId || !price || price < 500) {
-                msgDiv.innerHTML = '<div class="alert alert-danger">Select an animal and set a price (min R500)</div>';
-                return;
-            }
-            
-            const animal = demoAnimals.find(a => a.animal_id === animalId);
-            const age = Math.floor((new Date() - new Date(animal.birth_date)) / (365.25 * 24 * 3600 * 1000));
-            
-            const newListing = {
-                listing_id: 'l' + Date.now(),
-                animal_id: animalId,
-                title: `${animal.breed} ${animal.species} — ${age} years`,
-                species: animal.species,
-                breed: animal.breed,
-                starting_price: price,
-                current_bid: price,
-                bid_count: 0,
-                end_time: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000),
-                predicted_price: Math.round(price * 1.2),
-                status: 'active',
-                description: description
-            };
-            
-            listings.unshift(newListing);
-            toggleCreateForm();
-            renderListings();
-            showToast('Auction listing created!');
-            
-            document.getElementById('cPrice').value = '';
-            document.getElementById('cDesc').value = '';
-            msgDiv.innerHTML = '';
-        }
-        
-        // Initialize
-        requireLogin();
-        renderListings();
-        
-        // Set default end time for existing listings if needed
-        listings.forEach(l => {
-            if (typeof l.end_time === 'string') l.end_time = new Date(l.end_time);
-        });
-    </script>
+    <div class="market-tabs">
+      <button class="market-tab active" data-tab="timed" onclick="setTab('timed')">Timed Auctions</button>
+      <button class="market-tab" data-tab="closing" onclick="setTab('closing')">Closing Soon</button>
+      <button class="market-tab" data-tab="mine" onclick="setTab('mine')">My Listings</button>
+    </div>
+
+    <div class="market-toolbar">
+      <input type="text" id="searchInput" placeholder="Search lots..." oninput="renderCatalog()">
+      <select id="speciesFilter" onchange="renderCatalog()">
+        <option value="">All species</option>
+        <option value="Cattle">Cattle</option>
+        <option value="Goat">Goat</option>
+        <option value="Sheep">Sheep</option>
+      </select>
+      <select id="sortBy" onchange="renderCatalog()">
+        <option value="date">Order by closing</option>
+        <option value="price-asc">Price low to high</option>
+        <option value="price-desc">Price high to low</option>
+      </select>
+      <div class="market-count" id="resultCount">0 Results found</div>
+    </div>
+
+    <div class="lot-grid" id="lotGrid"></div>
+  </div>
+
+  <div class="lot-page" id="lotView"></div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="../js/auction-store.js"></script>
+<script src="../js/auction-ui.js"></script>
+<script>
+  let currentTab = 'timed';
+
+  function getToken() { return localStorage.getItem('agriguard_token'); }
+
+  function logout() {
+    localStorage.removeItem('agriguard_token');
+    localStorage.removeItem('agriguard_user');
+    localStorage.removeItem('agriguard_role');
+    window.location.href = '../login.html';
+  }
+
+  function requireLogin() {
+    if (!getToken()) window.location.href = '../login.html';
+  }
+
+  function showToast(message, isError) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = 'toast' + (isError ? ' error' : '');
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 5000);
+  }
+
+  function setTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.market-tab').forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+    });
+    renderCatalog();
+  }
+
+  function filteredLots() {
+    let lots = AgriAuction.listAuctions({
+      search: document.getElementById('searchInput').value,
+      species: document.getElementById('speciesFilter').value,
+      status: 'active',
+    });
+    if (currentTab === 'closing') {
+      lots = lots.filter((lot) => new Date(lot.auction_end) - Date.now() <= 48 * 60 * 60 * 1000);
+    } else if (currentTab === 'mine') {
+      lots = lots.filter((lot) => lot.mine);
+    }
+    const sort = document.getElementById('sortBy').value;
+    if (sort === 'price-asc') lots.sort((a, b) => a.current_bid - b.current_bid);
+    if (sort === 'price-desc') lots.sort((a, b) => b.current_bid - a.current_bid);
+    return lots;
+  }
+
+  function renderCatalog() {
+    const lots = filteredLots();
+    document.getElementById('resultCount').textContent = lots.length + ' Results found';
+    AgriAuctionUI.renderGrid(document.getElementById('lotGrid'), lots, { showWatch: false });
+  }
+
+  function toggleCreateForm() {
+    const form = document.getElementById('createForm');
+    form.classList.toggle('show');
+    if (form.classList.contains('show')) {
+      const select = document.getElementById('cAnimal');
+      const animals = AgriAuction.getAnimals().filter((animal) => String(animal.animal_id).startsWith('a'));
+      select.innerHTML = '<option value="">Select animal</option>' + animals.map((animal) => {
+        const disabled = animal.listed ? ' disabled' : '';
+        const suffix = animal.listed ? ' — already listed' : '';
+        return `<option value="${animal.animal_id}"${disabled}>${animal.name} — ${animal.breed} (${animal.ear_tag_id})${suffix}</option>`;
+      }).join('');
+    }
+  }
+
+  function createListing() {
+    const result = AgriAuction.createListing({
+      animal_id: document.getElementById('cAnimal').value,
+      starting_price: parseFloat(document.getElementById('cPrice').value),
+      duration_days: parseInt(document.getElementById('cDuration').value, 10),
+      description: document.getElementById('cDesc').value,
+      location: document.getElementById('cLocation').value,
+    });
+    const msg = document.getElementById('createMsg');
+    if (!result.ok) {
+      msg.innerHTML = `<div class="alert alert-danger">${result.error}</div>`;
+      return;
+    }
+    document.getElementById('createForm').classList.remove('show');
+    document.getElementById('cPrice').value = '';
+    document.getElementById('cDesc').value = '';
+    msg.innerHTML = '';
+    showToast('Lot published');
+    renderCatalog();
+    AgriAuctionUI.openLot(result.auction.auction_id);
+  }
+
+  requireLogin();
+  AgriAuctionUI.configure({
+    role: 'farmer',
+    showWatch: false,
+    onChange: renderCatalog,
+    onToast: showToast,
+  });
+  renderCatalog();
+  const deepLink = new URLSearchParams(window.location.search).get('id');
+  if (deepLink) AgriAuctionUI.openLot(deepLink);
+</script>
 </body>
 </html>
