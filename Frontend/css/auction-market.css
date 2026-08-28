@@ -309,7 +309,7 @@
 
 .lot-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) 360px;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
   gap: 22px;
   align-items: start;
 }
@@ -379,6 +379,7 @@
   padding: 18px;
   position: sticky;
   top: 84px;
+  min-width: 0;
 }
 
 .bid-box .bid-kicker {
@@ -412,12 +413,14 @@
 
 .bid-increments {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin: 8px 0 12px;
 }
 
 .bid-increments button {
-  flex: 1;
+  flex: 1 1 30%;
+  min-width: 0;
   border: 1px solid var(--border);
   background: var(--gray-50);
   border-radius: 8px;
@@ -589,7 +592,7 @@
   background: var(--red);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .lot-layout,
   .form-row {
     grid-template-columns: 1fr;
@@ -600,7 +603,7 @@
   .market-wrap {
     padding: 16px;
   }
-  .lot-hero {
+  .lot-hero.lot-photo {
     height: 220px;
   }
 }

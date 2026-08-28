@@ -146,6 +146,8 @@
     document.querySelectorAll('.market-tab').forEach((btn) => {
       btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
     });
+    AgriAuctionUI.closeLot();
+    window.scrollTo(0, 0);
     renderCatalog();
   }
 
