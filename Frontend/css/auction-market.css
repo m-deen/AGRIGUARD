@@ -219,6 +219,15 @@
   line-height: 1.25;
   text-transform: uppercase;
   letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
+}
+
+.lot-specs h2 {
+  display: block;
+  font-family: var(--display);
+  font-size: 22px;
+  padding: 16px 16px 0;
+  overflow-wrap: anywhere;
 }
 
 .lot-bid-row {
@@ -305,16 +314,9 @@
   align-items: start;
 }
 
-.lot-hero {
+.lot-hero.lot-photo {
   height: 320px;
   border-radius: 16px;
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  color: var(--green-dark);
 }
 
 .lot-hero .ag-icon {
@@ -336,7 +338,6 @@
   overflow: hidden;
 }
 
-.lot-specs h2,
 .bid-box h2 {
   font-size: 16px;
   padding: 14px 16px 0;

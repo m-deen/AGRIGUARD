@@ -97,7 +97,7 @@
       <button class="lot-back" onclick="AgriAuctionUI.closeLot()">← Back to timed auctions</button>
       <div class="lot-layout">
         <div>
-          <div class="lot-hero ${photoClass(auction.species)}">
+          <div class="lot-hero lot-photo ${photoClass(auction.species)}">
             ${AgriAuction.speciesIcon(auction.species)}
             <div class="lot-count" data-countdown="${auction.auction_end}">${AgriAuction.formatCountdown(auction.auction_end)}</div>
           </div>
