@@ -94,6 +94,32 @@ cd d:\PROJECT\AGRIGUARD\breed_id
 d:\PROJECT\AGRIGUARD\venv\Scripts\python.exe standalone_app.py
 ```
 
+Open http://localhost:5001 and upload a livestock photo.
+
+## Test the current model (no retrain)
+
+Three ways, from easiest to most thorough:
+
+**1. Farmer page (same path as a real user)**  
+Start AgriGuard (`Backend/app.py`), log in as a farmer, open **Breed ID**, upload a JPEG/PNG. Optional Cattle / Sheep / Goat filter is on that page.
+
+**2. One photo from the command line**
+
+```powershell
+cd breed_id\scripts
+pip install onnxruntime Pillow numpy
+python3 evaluate_breed_model.py --image ..\dataset\test\Afrikaner\images (3).jpg
+```
+
+**3. Score the labelled test folder** (prints accuracy per breed)
+
+```powershell
+python3 evaluate_breed_model.py
+python3 evaluate_breed_model.py --split train
+```
+
+`dataset/test/` is the held-out set. Do not judge the model only on `dataset/train/` — those photos were used to train it.
+
 ## Files
 
 | File | Role |
