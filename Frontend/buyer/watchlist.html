@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/agriguard-theme.css">
+  <link rel="stylesheet" href="../css/auction-market.css">
     <title>AgriGuard - My Watchlist</title>
     <style>
         * {
@@ -270,7 +271,7 @@
         <div class="nav-links">
             <a href="dashboard.html"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Dashboard</a>
             <a href="auctions.html"> <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14l-4 4M14 4l6 6M4.5 16.5L9 12l7-7 3 3-7 7-4.5 4.5zM13 19h8"/></svg> Browse Auctions</a>
-            <a href="bid-history.html">📜 My Bids</a>
+            <a href="bid-history.html">My Bids</a>
             <a href="watchlist.html" class="active"> <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.1 6.3L22 9.3l-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z"/></svg> Watchlist</a>
         </div>
         <button class="logout-btn" onclick="logout()">Logout</button>
@@ -285,163 +286,72 @@
             <button onclick="clearWatchlist()" style="background: #f3f4f6; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;"> <svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg> Clear All</button>
         </div>
 
-        <div id="watchlistGrid" class="watchlist-grid">
+        <div id="watchlistGrid" class="lot-grid">
             <!-- Watchlist items will be loaded here -->
         </div>
     </div>
 
     <div id="toast" class="toast"></div>
 
+    <script src="../js/auction-store.js"></script>
+    <script src="../js/auction-ui.js"></script>
     <script>
-        const API_BASE = 'http://localhost:5000';
-        
-        // Demo watchlist data - replace with API call when ready
-        let watchlist = [
-            { 
-                id: 1, 
-                auction_id: 1,
-                title: 'Nguni Bull - 4 years', 
-                species: 'Cattle', 
-                breed: 'Nguni',
-                current_bid: 8500,
-                starting_price: 8000,
-                end_time: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-                added_date: '2026-05-02'
-            },
-            { 
-                id: 2, 
-                auction_id: 2,
-                title: 'Bonsmara Cow', 
-                species: 'Cattle', 
-                breed: 'Bonsmara',
-                current_bid: 7800,
-                starting_price: 7500,
-                end_time: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-                added_date: '2026-05-01'
-            },
-            { 
-                id: 3, 
-                auction_id: 3,
-                title: 'Boer Goat Buck', 
-                species: 'Goat', 
-                breed: 'Boer Goat',
-                current_bid: 3200,
-                starting_price: 3000,
-                end_time: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
-                added_date: '2026-04-30'
-            }
-        ];
-        
         function getToken() { return localStorage.getItem('agriguard_token'); }
-        
-        function getUser() {
-            const user = localStorage.getItem('agriguard_user');
-            return user ? JSON.parse(user) : null;
-        }
-        
-        function showToast(message, isError = false) {
+
+        function showToast(message, isError) {
             const toast = document.getElementById('toast');
             toast.textContent = message;
             toast.className = `toast ${isError ? 'error' : ''}`;
             toast.style.display = 'block';
             setTimeout(() => toast.style.display = 'none', 8000);
         }
-        
+
         function logout() {
             localStorage.removeItem('agriguard_token');
             localStorage.removeItem('agriguard_user');
             localStorage.removeItem('agriguard_role');
             window.location.href = '../login.html';
         }
-        
+
         function requireLogin() {
-            if (!getToken()) {
-                window.location.href = '../login.html';
-            }
+            if (!getToken()) window.location.href = '../login.html';
         }
-        
-        function formatTimeLeft(endTime) {
-            const diff = new Date(endTime) - new Date();
-            if (diff <= 0) return 'Ended';
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % (86400000)) / 3600000);
-            if (days > 0) return `${days}d ${hours}h`;
-            if (hours > 0) return `${hours}h`;
-            return `${Math.floor(diff / 60000)}m`;
-        }
-        
-        function getSpeciesIcon(species) {
-            const icons = {
-                'Cattle': '',
-                'Goat': '',
-                'Sheep': '',
-                'Pig': '🐷'
-            };
-            return icons[species] || '🐾';
-        }
-        
+
         function renderWatchlist() {
+            const items = AgriAuction.watchlist();
             const container = document.getElementById('watchlistGrid');
-            
-            if (watchlist.length === 0) {
+            if (!items.length) {
                 container.innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-state-icon"></div>
                         <h3>Your watchlist is empty</h3>
-                        <p>Browse auctions and click the star icon to add items to your watchlist</p>
-                        <button onclick="location.href='auctions.html'" style="margin-top: 20px; padding: 10px 24px; background: #1D9E75; color: white; border: none; border-radius: 8px; cursor: pointer;"><svg class="ag-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14l-4 4M14 4l6 6M4.5 16.5L9 12l7-7 3 3-7 7-4.5 4.5zM13 19h8"/></svg> Browse Auctions</button>
+                        <p>Open Timed Auctions and tap the star on a lot to follow it.</p>
+                        <button class="btn-primary btn-header" onclick="location.href='auctions.html'" style="margin-top:16px;width:auto;">Browse auctions</button>
                     </div>
                 `;
                 return;
             }
-            
-            container.innerHTML = watchlist.map(item => `
-                <div class="watchlist-card">
-                    <div class="watchlist-image">
-                        ${getSpeciesIcon(item.species)}
-                        <button class="remove-btn" onclick="removeFromWatchlist(${item.id})" title="Remove from watchlist">✕</button>
-                    </div>
-                    <div class="watchlist-details">
-                        <div class="watchlist-title">${item.title}</div>
-                        <div class="watchlist-meta">${item.species} · ${item.breed}</div>
-                        <div class="bid-info">
-                            <div>
-                                <span class="current-bid">R${(item.current_bid || item.starting_price).toLocaleString()}</span>
-                            </div>
-                            <span class="time-left">⏱ ${formatTimeLeft(item.end_time)}</span>
-                        </div>
-                        <button class="bid-button" onclick="viewAuction(${item.auction_id})">View Auction</button>
-                        <div class="added-date">Added on ${item.added_date}</div>
-                    </div>
-                </div>
-            `).join('');
+            AgriAuctionUI.renderGrid(container, items, { showWatch: false });
         }
-        
-        function removeFromWatchlist(itemId) {
-            watchlist = watchlist.filter(item => item.id !== itemId);
-            renderWatchlist();
-            showToast('Removed from watchlist');
-        }
-        
+
         function clearWatchlist() {
-            if (watchlist.length === 0) {
+            if (!AgriAuction.watchlist().length) {
                 showToast('Watchlist is already empty');
                 return;
             }
-            
-            if (confirm('Are you sure you want to clear your entire watchlist?')) {
-                watchlist = [];
+            if (confirm('Clear your entire watchlist?')) {
+                AgriAuction.clearWatch();
                 renderWatchlist();
                 showToast('Watchlist cleared');
             }
         }
-        
-        function viewAuction(auctionId) {
-            window.location.href = `auctions.html?id=${auctionId}`;
-        }
-        
-        // Initialize
+
         requireLogin();
+        AgriAuctionUI.configure({
+            role: 'buyer',
+            showWatch: false,
+            onChange: renderWatchlist,
+            onToast: showToast,
+        });
         renderWatchlist();
     </script>
 </body>

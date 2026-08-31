@@ -363,6 +363,22 @@
       <a onclick="openRegisterModal()">Create new account</a>
     </div>
 
+    <div class="divider">TIMED AUCTIONS — NO BACKEND</div>
+    <div class="demo-account" id="previewFarmer" role="button" tabindex="0">
+      <div>
+        <strong>Open farmer auctions</strong>
+        <small>Works in Chrome without Flask / API</small>
+      </div>
+      <span class="demo-badge badge-farmer">Farmer</span>
+    </div>
+    <div class="demo-account" id="previewBuyer" role="button" tabindex="0">
+      <div>
+        <strong>Open buyer auctions</strong>
+        <small>Browse lots, bid, and watchlist locally</small>
+      </div>
+      <span class="demo-badge badge-buyer">Buyer</span>
+    </div>
+
     <div class="divider">DEMO ACCOUNTS</div>
     <div class="demo-account" data-email="farmer@agriguard.co.za" data-password="password123">
       <div>
@@ -809,7 +825,18 @@
     } catch (error) {
       setLoading(loginBtn, false, 'Sign in');
       console.error('Login error:', error);
-      showError('Cannot reach the server. Make sure Flask is running on port 5000');
+      const lowered = String(email || '').toLowerCase();
+      if (lowered.includes('buyer@')) {
+        showSuccess('Backend is offline — opening local buyer auctions…');
+        setTimeout(() => openLocalAuctions('buyer'), 600);
+        return true;
+      }
+      if (lowered.includes('farmer@')) {
+        showSuccess('Backend is offline — opening local farmer auctions…');
+        setTimeout(() => openLocalAuctions('farmer'), 600);
+        return true;
+      }
+      showError('Cannot reach the server. Use “Open farmer/buyer auctions” below, or start Flask on port 5000.');
       return false;
     }
   }
@@ -1052,8 +1079,22 @@ async function registerUser() {
     }
   });
   
+  function openLocalAuctions(role) {
+    const isBuyer = role === 'buyer';
+    const user = isBuyer
+      ? { user_id: 'buyer-preview', first_name: 'Thabo', email: 'buyer@agriguard.co.za', role: 'buyer' }
+      : { user_id: 'farmer-preview', first_name: 'Sipho', email: 'farmer@agriguard.co.za', role: 'farmer' };
+    localStorage.setItem('agriguard_token', 'local-auction-preview');
+    localStorage.setItem('agriguard_role', user.role);
+    localStorage.setItem('agriguard_user', JSON.stringify(user));
+    window.location.href = isBuyer ? 'buyer/auctions.html' : 'farmer/auctions.html';
+  }
+
+  document.getElementById('previewFarmer')?.addEventListener('click', () => openLocalAuctions('farmer'));
+  document.getElementById('previewBuyer')?.addEventListener('click', () => openLocalAuctions('buyer'));
+
   // Demo account buttons
-  document.querySelectorAll('.demo-account').forEach(el => {
+  document.querySelectorAll('.demo-account[data-email]').forEach(el => {
     el.addEventListener('click', () => {
       const email = el.dataset.email;
       const password = el.dataset.password;

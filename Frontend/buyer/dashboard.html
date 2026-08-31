@@ -285,9 +285,8 @@
 
     <div id="toast" class="toast"></div>
 
+    <script src="../js/auction-store.js"></script>
     <script>
-        const API_BASE = 'http://localhost:5000';
-
         function getToken() {
             return localStorage.getItem('agriguard_token');
         }
@@ -327,17 +326,7 @@
             }
         }
 
-        function formatTimeLeft(endTime) {
-            const diff = new Date(endTime) - new Date();
-            if (diff <= 0 || !endTime) return 'Ended';
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % 86400000) / 3600000);
-            if (days > 0) return `${days}d ${hours}h left`;
-            if (hours > 0) return `${hours}h left`;
-            return `${Math.floor(diff / 60000)}m left`;
-        }
-
-        async function loadDashboard() {
+        function loadDashboard() {
             const user = getUser();
             if (user) {
                 const name = user.first_name || user.full_name || user.email || 'Buyer';
@@ -345,51 +334,27 @@
                     `Welcome back, ${name}. Browse auctions, track bids, and manage your watchlist.`;
             }
 
-            try {
-                const response = await fetch(`${API_BASE}/api/auctions`, {
-                    headers: { Authorization: `Bearer ${getToken()}` }
-                });
-                const result = await response.json();
-                const auctions = (result.status === 'success' && result.data) ? result.data : [];
+            const stats = AgriAuction.stats();
+            document.getElementById('activeAuctions').textContent = stats.activeAuctions;
+            document.getElementById('myBids').textContent = stats.myActiveBids;
+            document.getElementById('watchCount').textContent = stats.watchCount;
 
-                document.getElementById('activeAuctions').textContent = auctions.length;
-
-                const ending = [...auctions]
-                    .filter(a => a.auction_end)
-                    .sort((a, b) => new Date(a.auction_end) - new Date(b.auction_end))
-                    .slice(0, 5);
-
-                const list = document.getElementById('endingSoon');
-                if (ending.length === 0) {
-                    list.innerHTML = '<div class="empty-state">No active auctions yet. <a href="auctions.html">Browse auctions</a></div>';
-                } else {
-                    list.innerHTML = ending.map(a => `
-                        <div class="auction-row">
-                            <div>
-                                <strong>${a.title || 'Livestock Auction'}</strong>
-                                <div class="meta">${a.species || 'Various'} · ${formatTimeLeft(a.auction_end)}</div>
-                            </div>
-                            <div class="bid">R${(a.current_bid || a.starting_price || 0).toLocaleString()}</div>
-                        </div>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error(error);
-                document.getElementById('endingSoon').innerHTML =
-                    '<div class="empty-state">Could not load auctions. <a href="auctions.html">Try Browse Auctions</a></div>';
-                showToast('Error loading dashboard', true);
+            const ending = AgriAuction.endingSoon(5);
+            const list = document.getElementById('endingSoon');
+            if (ending.length === 0) {
+                list.innerHTML = '<div class="empty-state">No active auctions yet. <a href="auctions.html">Browse auctions</a></div>';
+                return;
             }
 
-            // Bid / watchlist counts use local storage until dedicated APIs are wired
-            try {
-                const bids = JSON.parse(localStorage.getItem('agriguard_buyer_bids') || '[]');
-                const watch = JSON.parse(localStorage.getItem('agriguard_watchlist') || '[]');
-                document.getElementById('myBids').textContent = bids.filter(b => b.status === 'active').length || 0;
-                document.getElementById('watchCount').textContent = watch.length || 0;
-            } catch (_) {
-                document.getElementById('myBids').textContent = '0';
-                document.getElementById('watchCount').textContent = '0';
-            }
+            list.innerHTML = ending.map((auction) => `
+                <div class="auction-row">
+                    <div>
+                        <strong>${auction.title || 'Livestock Auction'}</strong>
+                        <div class="meta">${auction.species || 'Various'} · ${AgriAuction.formatTimeLeft(auction.auction_end)} left</div>
+                    </div>
+                    <div class="bid">R${Number(auction.current_bid || auction.starting_price || 0).toLocaleString()}</div>
+                </div>
+            `).join('');
         }
 
         requireBuyer();
