@@ -186,7 +186,7 @@ h1{font-size:26px;margin-bottom:4px;color:#111827;display:flex;align-items:cente
     <input type="file" id="file" accept="image/jpeg,image/png,image/webp" tabindex="-1" aria-hidden="true"/>
     <div class="preview" id="preview"><img id="prevImg" alt="preview"/></div>
     <div class="species-row">
-      <label for="species">Species (recommended — stops Dorper ↔ Boer Goat and red-goat ↔ cattle mix-ups)</label>
+      <label for="species">Species (recommended — stops Dorper vs Boer Goat and red-goat vs cattle mix-ups)</label>
       <select id="species">
         <option value="">Auto (all breeds)</option>
         <option value="Sheep">Sheep</option>
@@ -468,9 +468,12 @@ const FALLBACK_TIPS = [
 
 function renderBreeds(list){
   const el = document.getElementById('breedGrid');
-  el.innerHTML = (list || []).map(b =>
-    `<span class="breed-pill"><b>${esc(prettyBreed(b.breed_name || b.breed))}</b> ${esc(b.species || '')}</span>`
-  ).join('');
+  el.innerHTML = (list || []).map(b => {
+    const name = prettyBreed(b.breed_name || b.breed);
+    const sp = String(b.species || '').trim();
+    const extra = (sp && !name.toLowerCase().includes(sp.toLowerCase())) ? ` · ${sp}` : '';
+    return `<span class="breed-pill"><b>${esc(name)}</b>${esc(extra)}</span>`;
+  }).join('');
 }
 function renderTips(tips){
   document.getElementById('tipList').innerHTML =
