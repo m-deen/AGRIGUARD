@@ -15,6 +15,8 @@ if str(ROOT) not in sys.path:
 
 from breed_config import CLASS_FOLDERS, canonical_breed, display_name
 from download_breed_photos import _title_allowed
+from download_breed_photos import extract_vleissentraal_feature_urls
+from download_breed_photos import looks_like_placeholder
 from ingest_extra_photos import unique_dest
 
 
@@ -55,6 +57,45 @@ class WikimediaTitleFilterTests(unittest.TestCase):
         self.assertFalse(_title_allowed("Afrikaner", "File:Afrikaner rugby match.jpg"))
         self.assertFalse(_title_allowed("Afrikaner", "File:Jan Jonker Afrikaner Portrait.jpg"))
         self.assertFalse(_title_allowed("Afrikaner", "File:Red Bull racing.jpg"))
+
+
+class VleissentraalSourceTests(unittest.TestCase):
+    def test_extracts_unique_lot_feature_urls(self):
+        html = """
+        <img src="https://www.vleissentraal.co.za/storage/lot/feature/20230620071604.jpg">
+        <img src="https://www.vleissentraal.co.za/storage/lot/feature/20230620071604.jpg">
+        <img src="https://www.vleissentraal.co.za/storage/lot/feature/20230620071642.jpg">
+        <img src="/img/nav_logo.png">
+        """
+        urls = extract_vleissentraal_feature_urls(html)
+        self.assertEqual(
+            urls,
+            [
+                "https://www.vleissentraal.co.za/storage/lot/feature/20230620071604.jpg",
+                "https://www.vleissentraal.co.za/storage/lot/feature/20230620071642.jpg",
+            ],
+        )
+
+    def test_placeholder_is_small_flat_image(self):
+        from PIL import Image
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "stub.jpg"
+            Image.new("RGB", (400, 300), (180, 90, 40)).save(path, "JPEG", quality=80)
+            self.assertTrue(looks_like_placeholder(path))
+
+    def test_real_photo_is_not_placeholder(self):
+        from PIL import Image
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "cow.jpg"
+            img = Image.new("RGB", (1200, 900), (20, 120, 40))
+            for x in range(80, 900):
+                for y in range(80, 700):
+                    img.putpixel((x, y), ((x * 3) % 200 + 40, 70, (y * 2) % 160 + 30))
+            img.save(path, "JPEG", quality=92)
+            self.assertGreaterEqual(path.stat().st_size, 70_000)
+            self.assertFalse(looks_like_placeholder(path))
 
 
 class LookalikeNoteTests(unittest.TestCase):

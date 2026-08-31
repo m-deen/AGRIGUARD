@@ -8,5 +8,6 @@ Afrikaner example:
     extra_photos/Afrikaner/bull_01.jpg
     extra_photos/Afrikaner/cow_veld.jpg
 
-Only keep photos that clearly show that breed. Search downloads often
-include Nguni, buffalo, or wildlife, which will *lower* Afrikaner accuracy.
+Only keep photos that clearly show that breed. Prefer `--engine labeled`
+(Afrikaner stud auctions) over Bing/Google search. Search downloads often
+include people, Nguni, buffalo, or wildlife, which will *lower* Afrikaner accuracy.

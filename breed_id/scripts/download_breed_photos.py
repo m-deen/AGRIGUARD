@@ -7,8 +7,8 @@ them, then ingest_extra_photos.py copies keepers into dataset/train|test.
 Afrikaner is the smallest class in the current dataset — run this for
 that breed first:
 
+    python3 download_breed_photos.py --breed Afrikaner --engine labeled
     python3 download_breed_photos.py --breed Afrikaner --engine wikimedia
-    python3 download_breed_photos.py --breed Afrikaner --engine bing
 
 Then skim extra_photos/Afrikaner/ and drop anything that is not a
 red Afrikaner / Africander cow or bull (Nguni, buffalo, wildebeest,
@@ -49,11 +49,12 @@ IMAGES_PER_QUERY = 80
 BREED_SEARCH_QUERIES = {
     # "Afrikaner" also means the ethnic group — keep queries livestock-specific.
     "Afrikaner": [
-        "Afrikanerbees",
-        "Afrikaner oxen trek South Africa",
-        "Africander cattle bull farm",
-        "red Afrikaner cattle veld horns hump",
-        "Afrikaner cow Sanga breed South Africa",
+        # "Afrikanerbees" alone hits Spanish football (Marca), not cattle.
+        "Afrikanerbees koei bul Suid-Afrika",
+        "Afrikaner oxen trek ox wagon cattle South Africa",
+        "Africander cattle bull farm South Africa",
+        "red Afrikaner cattle veld horns hump Sanga",
+        "Afrikaner cow Sanga breed cattle South Africa",
     ],
     "Nguni": [
         "Nguni cattle South Africa",
@@ -104,6 +105,21 @@ WIKIMEDIA_TITLE_REJECT = (
     "rugby", "map", "karte", "portrait", "people", "red bull", "perfume",
 )
 
+# Afrikaner-only stud auctions (lot photos are labelled Afrikaner cattle).
+VLEISSENTRAAL_AFRIKANER_AUCTIONS = (3626,)
+VLEISSENTRAAL_BROWSER_UA = (
+    "Mozilla/5.0 (compatible; AgriGuardBreedID/1.0; "
+    "academic livestock classifier; extra training photos)"
+)
+UPSPACE_AFRIKANER_URLS = (
+    "https://repository.up.ac.za/bitstream/handle/2263/13495/pas002.jpg?sequence=1&isAllowed=y",
+    "https://repository.up.ac.za/bitstream/handle/2263/13495/pas003.jpg?sequence=2&isAllowed=y",
+)
+SA_DOT_CO_ZA_AFRIKANER_URLS = tuple(
+    f"https://southafrica.co.za/images/afrikaner{i}-786x524.jpg" for i in range(1, 6)
+)
+PLACEHOLDER_MIN_BYTES = 70_000
+
 
 def remove_duplicate_images(folder: Path) -> int:
     seen_hashes: set[str] = set()
@@ -121,6 +137,134 @@ def remove_duplicate_images(folder: Path) -> int:
         else:
             seen_hashes.add(digest)
     return removed
+
+
+def looks_like_placeholder(path: Path) -> bool:
+    """Drop auction stubs ('PHOTO NOT AVAILABLE') which are small and flat."""
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return True
+    if size < PLACEHOLDER_MIN_BYTES:
+        return True
+    try:
+        from PIL import Image
+    except ImportError:
+        return False
+    try:
+        with Image.open(path) as img:
+            sample = img.convert("RGB").resize((32, 32))
+            pixels = [sample.getpixel((x, y)) for y in range(32) for x in range(32)]
+    except Exception:
+        return True
+    if not pixels:
+        return True
+    means = [sum(c[i] for c in pixels) / len(pixels) for i in range(3)]
+    var = sum(
+        (c[0] - means[0]) ** 2 + (c[1] - means[1]) ** 2 + (c[2] - means[2]) ** 2
+        for c in pixels
+    ) / len(pixels)
+    return var < 400.0
+
+
+def _http_get(url: str, timeout: int = 45, user_agent: str | None = None) -> bytes:
+    req = Request(
+        url,
+        headers={
+            "User-Agent": user_agent or USER_AGENT,
+            "Accept": "image/jpeg,image/png,image/*,text/html,*/*;q=0.8",
+        },
+    )
+    with urlopen(req, timeout=timeout) as resp:
+        return resp.read()
+
+
+def extract_vleissentraal_feature_urls(html: str) -> list[str]:
+    import re
+
+    found = re.findall(
+        r"https://www\.vleissentraal\.co\.za/storage/lot/feature/[^\"']+\.(?:jpg|jpeg|png)",
+        html,
+        flags=re.I,
+    )
+    return list(dict.fromkeys(found))
+
+
+def download_vleissentraal_afrikaner(output_folder: Path) -> int:
+    """Fetch lot photos from known Afrikaner stud auctions."""
+    print(f"\n[Afrikaner] Vleissentraal — {len(VLEISSENTRAAL_AFRIKANER_AUCTIONS)} auction(s)")
+    output_folder.mkdir(parents=True, exist_ok=True)
+    saved = 0
+    seen_urls: set[str] = set()
+    for auction_id in VLEISSENTRAAL_AFRIKANER_AUCTIONS:
+        page = f"https://www.vleissentraal.co.za/en/view-auction/{auction_id}"
+        print(f"    - auction {auction_id}")
+        try:
+            html = _http_get(page, user_agent=VLEISSENTRAAL_BROWSER_UA).decode(
+                "utf-8", "ignore"
+            )
+        except Exception as error:
+            print(f"      (page failed: {error})")
+            continue
+        for url in extract_vleissentraal_feature_urls(html):
+            if url in seen_urls:
+                continue
+            seen_urls.add(url)
+            dest = output_folder / f"vs_{saved:04d}.jpg"
+            while dest.exists():
+                saved += 1
+                dest = output_folder / f"vs_{saved:04d}.jpg"
+            try:
+                body = _http_get(url, user_agent=VLEISSENTRAAL_BROWSER_UA)
+            except Exception:
+                continue
+            if not body.startswith(b"\xff\xd8") or len(body) < 8_000:
+                continue
+            dest.write_bytes(body)
+            if looks_like_placeholder(dest):
+                dest.unlink(missing_ok=True)
+                continue
+            saved += 1
+            time.sleep(0.12)
+    print(f"    - saved {saved} Vleissentraal file(s)")
+    return saved
+
+
+def download_fixed_url_list(
+    urls: tuple[str, ...],
+    output_folder: Path,
+    prefix: str,
+) -> int:
+    output_folder.mkdir(parents=True, exist_ok=True)
+    saved = 0
+    for url in urls:
+        dest = output_folder / f"{prefix}_{saved:04d}.jpg"
+        while dest.exists():
+            saved += 1
+            dest = output_folder / f"{prefix}_{saved:04d}.jpg"
+        try:
+            body = _http_get(url)
+        except Exception as error:
+            print(f"      (skip {url}: {error})")
+            continue
+        if not (body.startswith(b"\xff\xd8") or body[:8] == b"\x89PNG\r\n\x1a\n"):
+            continue
+        if len(body) < 8_000:
+            continue
+        dest.write_bytes(body)
+        saved += 1
+    return saved
+
+
+def download_labeled_afrikaner_sources(output_folder: Path) -> int:
+    """Sources that are already labelled Afrikaner cattle (not web-search)."""
+    print("\n[Afrikaner] labelled sources (auctions + university slides)")
+    n = download_vleissentraal_afrikaner(output_folder)
+    up_n = download_fixed_url_list(UPSPACE_AFRIKANER_URLS, output_folder, "up")
+    print(f"    - saved {up_n} University of Pretoria slide(s)")
+    sa_n = download_fixed_url_list(SA_DOT_CO_ZA_AFRIKANER_URLS, output_folder, "sa")
+    print(f"    - saved {sa_n} southafrica.co.za photo(s)")
+    return n + up_n + sa_n
 
 
 def download_with_icrawler(
@@ -291,6 +435,8 @@ def download_photos_for_breed(
 ) -> Path:
     output_folder = output_root / breed
     output_folder.mkdir(parents=True, exist_ok=True)
+    if breed == "Afrikaner" and engine in ("labeled", "vleissentraal", "all"):
+        download_labeled_afrikaner_sources(output_folder)
     if engine in ("wikimedia", "all"):
         download_wikimedia(breed, output_folder, images_per_query)
     if engine in ("bing", "google", "both", "all"):
@@ -317,10 +463,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--engine",
-        choices=["wikimedia", "bing", "google", "both", "all"],
-        default="wikimedia",
-        help="wikimedia is usually cleaner for Afrikaner. "
-        "bing/google need: pip install icrawler. Default: wikimedia.",
+        choices=["labeled", "vleissentraal", "wikimedia", "bing", "google", "both", "all"],
+        default="labeled",
+        help="labeled = Afrikaner stud-auction + university slides (cleanest). "
+        "wikimedia is next. bing/google need icrawler and are noisy for Afrikaner. "
+        "Default: labeled.",
     )
     parser.add_argument(
         "--images-per-query",
@@ -357,6 +504,7 @@ def main() -> None:
     if "Afrikaner" in breeds and args.engine in ("bing", "google", "both", "all"):
         print(
             "Note: web search for 'Afrikaner' often returns people, not cattle. "
+            "Prefer --engine labeled (Vleissentraal Afrikaner auctions). "
             "Delete anything that is not a red Afrikaner/Africander cow or bull "
             "before ingest_extra_photos.py."
         )

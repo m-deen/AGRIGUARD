@@ -20,10 +20,11 @@ Only the main API (:5000) is required.
 
 ## Improve Afrikaner accuracy with more photos
 
-Afrikaner is the smallest class (and the current folder still has very few
-clean examples). More **unique, correctly labelled** photos + a retrain is
-the way to lift that breed's accuracy. Do not only duplicate or heavily
-augment the same 4–6 pictures.
+Afrikaner was the smallest class. The labelled download path
+(`--engine labeled`) pulls stud-auction lot photos and university slides.
+After ingest, Afrikaner is **52 train / 12 test**. More unique photos still
+help, especially close-ups without catalog banners. Do not only duplicate
+or heavily augment the same handful of pictures.
 
 ### 1. Add photos
 
@@ -40,7 +41,14 @@ cd breed_id\scripts
 python3 ingest_extra_photos.py --source C:\photos\afrikaner --breed Afrikaner
 ```
 
-Need to collect images first? Wikimedia Commons is the cleaner default:
+Need to collect images first? Wikimedia Commons is small for this breed.
+Prefer labelled Afrikaner sources (stud auctions + university slides):
+
+```powershell
+python3 download_breed_photos.py --breed Afrikaner --engine labeled
+```
+
+Wikimedia Commons is the next-cleanest option:
 
 ```powershell
 python3 download_breed_photos.py --breed Afrikaner --engine wikimedia
@@ -55,8 +63,8 @@ Check the balance:
 python3 ingest_extra_photos.py --counts
 ```
 
-Aim for **dozens of unique Afrikaner photos** (50+ is a realistic target),
-not just 5–10. Keep a held-out test split (the ingest script uses 80/20).
+The train set is now **52 unique Afrikaner photos** (plus 12 held-out test).
+Keep a held-out test split (the ingest script uses 80/20).
 
 ### 2. Retrain (needs TensorFlow — Python 3.12/3.13 venv)
 
@@ -128,7 +136,7 @@ python3 evaluate_breed_model.py --split train
 | `model_loader.py` | ONNX first, TensorFlow fallback |
 | `class_labels.json` | Class index → breed name |
 | `scripts/ingest_extra_photos.py` | Copy new photos into train/test |
-| `scripts/download_breed_photos.py` | Fetch extra Afrikaner (etc.) photos |
+| `scripts/download_breed_photos.py` | Fetch extra Afrikaner photos (`--engine labeled` = stud auctions) |
 | `scripts/evaluate_breed_model.py` | Score the current ONNX model on test photos |
 | `scripts/retrain_breed_model.py` | Train + export ONNX |
 | `scripts/prepare_dataset.py` | Clean a `raw_photos/` dump |
