@@ -108,7 +108,7 @@ Start AgriGuard (`Backend/app.py`), log in as a farmer, open **Breed ID**, uploa
 ```powershell
 cd breed_id\scripts
 pip install onnxruntime Pillow numpy
-python3 evaluate_breed_model.py --image ..\dataset\test\Afrikaner\images (3).jpg
+python3 evaluate_breed_model.py --image "..\dataset\test\Afrikaner\images (3).jpg"
 ```
 
 **3. Score the labelled test folder** (prints accuracy per breed)
@@ -129,6 +129,7 @@ python3 evaluate_breed_model.py --split train
 | `class_labels.json` | Class index → breed name |
 | `scripts/ingest_extra_photos.py` | Copy new photos into train/test |
 | `scripts/download_breed_photos.py` | Fetch extra Afrikaner (etc.) photos |
+| `scripts/evaluate_breed_model.py` | Score the current ONNX model on test photos |
 | `scripts/retrain_breed_model.py` | Train + export ONNX |
 | `scripts/prepare_dataset.py` | Clean a `raw_photos/` dump |
 
