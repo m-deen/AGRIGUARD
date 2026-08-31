@@ -128,6 +128,19 @@ python3 evaluate_breed_model.py --split train
 
 `dataset/test/` is the held-out set. Do not judge the model only on `dataset/train/` — those photos were used to train it.
 
+After the labelled-photo retrain, ONNX scores on `dataset/test/` were:
+
+| Breed | Test photos | Correct | Accuracy |
+|-------|-------------|---------|----------|
+| Afrikaner | 12 | 10 | 83% |
+| Boer Goat | 4 | 4 | 100% |
+| Bonsmara | 10 | 8 | 80% |
+| Dorper | 15 | 15 | 100% |
+| Nguni | 10 | 8 | 80% |
+| **Overall** | **51** | **45** | **88%** |
+
+Afrikaner was 0% on the same test photos before this retrain (every shot called Bonsmara). Two Afrikaner misses are still Bonsmara, which is the closest red-cattle lookalike.
+
 ## Files
 
 | File | Role |

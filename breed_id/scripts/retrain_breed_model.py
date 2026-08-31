@@ -96,19 +96,22 @@ def make_datasets(batch: int):
         [
             layers.RandomFlip("horizontal"),
             layers.RandomRotation(0.08),
-            layers.RandomZoom(0.12),
+            layers.RandomZoom(0.18),
+            layers.RandomTranslation(0.08, 0.08),
             layers.RandomContrast(0.12),
             layers.RandomBrightness(0.12),
         ],
         name="aug",
     )
 
+    @tf.autograph.experimental.do_not_convert
     def prep_train(x, y):
         x = tf.cast(x, tf.float32)
         x = aug(x, training=True)
         x = preprocess_input(x)
         return x, y
 
+    @tf.autograph.experimental.do_not_convert
     def prep_val(x, y):
         x = preprocess_input(tf.cast(x, tf.float32))
         return x, y
