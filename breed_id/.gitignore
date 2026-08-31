@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 raw_photos/
 dataset_ready/
+extra_photos/*
+!extra_photos/README.md

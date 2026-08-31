@@ -412,12 +412,18 @@ def get_top_predictions(raw_probabilities: dict, top_n: int = NUMBER_OF_PREDICTI
 
 
 def lookalike_note(predictions: list) -> str | None:
-    """Warn when classic Dorper ↔ Boer Goat confusion is likely."""
+    """Warn when classic lookalike pairs are in the top results."""
     names = {p["breed"] for p in predictions[:3]}
     if "Dorper" in names and "Boer Goat" in names:
         return (
             "Dorper sheep and Boer goats often look alike (white body, dark head). "
             "If you know the species, pick Sheep or Goat above to refine the result."
+        )
+    if "Afrikaner" in names and "Bonsmara" in names:
+        return (
+            "Afrikaner and Bonsmara are both red South African cattle. "
+            "Afrikaner typically has a larger hump and wide lateral horns; "
+            "Bonsmara is smoother and more compact."
         )
     return None
 

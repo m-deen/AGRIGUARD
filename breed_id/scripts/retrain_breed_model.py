@@ -1,40 +1,84 @@
 """
 Retrain MobileNetV2 breed classifier on cleaned local dataset.
 Exports breed_classifier.h5 + breed_classifier.onnx for AgriGuard inference.
+
+After adding extra Afrikaner (or other) photos:
+
+    python3 ingest_extra_photos.py --counts
+    python3 retrain_breed_model.py
 """
 from __future__ import annotations
 
+import argparse
 import json
+import sys
 from pathlib import Path
 
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras import layers, models
-from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input
+SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
 
-ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "dataset"
-MODELS = ROOT / "models"
-LABELS_PATH = ROOT / "class_labels.json"
+from breed_config import (  # noqa: E402
+    CLASS_FOLDERS,
+    DATASET_DIR,
+    DISPLAY_NAMES,
+    LABELS_PATH,
+    MODELS_DIR,
+    display_name,
+)
 
 IMG_SIZE = (224, 224)
 BATCH = 16
 SEED = 42
 EPOCHS_FROZEN = 8
 EPOCHS_FINETUNE = 10
-# Alphabetical folder order must match inference labels
-CLASS_NAMES = ["Afrikaner", "Boer_Goat", "Bonsmara", "Dorper", "Nguni"]
-DISPLAY_NAMES = ["Afrikaner", "Boer Goat", "Bonsmara", "Dorper", "Nguni"]
+CLASS_NAMES = CLASS_FOLDERS
+DATA = DATASET_DIR
+MODELS = MODELS_DIR
 
 
-def make_datasets():
+def count_images(split: str, breed: str) -> int:
+    folder = DATA / split / breed
+    if not folder.is_dir():
+        return 0
+    return sum(1 for p in folder.iterdir() if p.is_file())
+
+
+def print_dataset_counts() -> dict[str, int]:
+    print("dataset counts")
+    print(f"{'breed':<12} {'train':>7} {'test':>7}")
+    print("-" * 28)
+    train_counts = {}
+    for name in CLASS_NAMES:
+        n_train = count_images("train", name)
+        n_test = count_images("test", name)
+        train_counts[name] = n_train
+        print(f"{display_name(name):<12} {n_train:>7} {n_test:>7}")
+    print("-" * 28)
+    return train_counts
+
+
+def make_datasets(batch: int):
+    import tensorflow as tf
+    from tensorflow.keras import layers
+    from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+
+    missing = [n for n in CLASS_NAMES if count_images("train", n) == 0]
+    if missing:
+        raise SystemExit(
+            "No training images for: "
+            + ", ".join(display_name(n) for n in missing)
+            + f"\nAdd photos under {DATA / 'train'}/ then re-run. "
+            "For Afrikaner: python3 ingest_extra_photos.py --breed Afrikaner"
+        )
+
     train_ds = tf.keras.utils.image_dataset_from_directory(
         DATA / "train",
         labels="inferred",
         label_mode="categorical",
         class_names=CLASS_NAMES,
         image_size=IMG_SIZE,
-        batch_size=BATCH,
+        batch_size=batch,
         shuffle=True,
         seed=SEED,
     )
@@ -44,7 +88,7 @@ def make_datasets():
         label_mode="categorical",
         class_names=CLASS_NAMES,
         image_size=IMG_SIZE,
-        batch_size=BATCH,
+        batch_size=batch,
         shuffle=False,
     )
 
@@ -54,6 +98,7 @@ def make_datasets():
             layers.RandomRotation(0.08),
             layers.RandomZoom(0.12),
             layers.RandomContrast(0.12),
+            layers.RandomBrightness(0.12),
         ],
         name="aug",
     )
@@ -74,19 +119,33 @@ def make_datasets():
     return train_ds, val_ds
 
 
-def class_weights_from_counts() -> dict:
+def class_weights_from_counts(boost_breed: str | None, boost_factor: float) -> dict:
     counts = []
     for name in CLASS_NAMES:
-        n = len(list((DATA / "train" / name).glob("*")))
-        counts.append(max(n, 1))
+        counts.append(max(count_images("train", name), 1))
     total = sum(counts)
-    # Balanced weights: rarer classes weigh more
     weights = {i: (total / (len(counts) * c)) for i, c in enumerate(counts)}
+    if boost_breed:
+        from breed_config import canonical_breed
+
+        canon = canonical_breed(boost_breed)
+        if not canon:
+            raise SystemExit(f"Unknown --boost-class '{boost_breed}'")
+        idx = CLASS_NAMES.index(canon)
+        weights[idx] *= boost_factor
+        print(
+            f"boosted {display_name(canon)} class weight "
+            f"x{boost_factor:g} → {weights[idx]:.2f}"
+        )
     print("class_weights", {DISPLAY_NAMES[i]: round(w, 2) for i, w in weights.items()})
     return weights
 
 
-def build_model(trainable_base: bool = False) -> tf.keras.Model:
+def build_model(trainable_base: bool = False):
+    import tensorflow as tf
+    from tensorflow.keras import layers, models
+    from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2
+
     base = MobileNetV2(
         input_shape=IMG_SIZE + (3,),
         include_top=False,
@@ -100,11 +159,11 @@ def build_model(trainable_base: bool = False) -> tf.keras.Model:
     x = layers.Dense(128, activation="relu")(x)
     x = layers.Dropout(0.25)(x)
     outputs = layers.Dense(len(CLASS_NAMES), activation="softmax")(x)
-    model = models.Model(inputs, outputs)
-    return model
+    return models.Model(inputs, outputs)
 
 
 def export_onnx(h5_path: Path, onnx_path: Path):
+    import tensorflow as tf
     import tf2onnx
 
     model = tf.keras.models.load_model(h5_path, compile=False)
@@ -114,10 +173,58 @@ def export_onnx(h5_path: Path, onnx_path: Path):
     print("Wrote", onnx_path)
 
 
-def main():
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Retrain the AgriGuard breed classifier (use after adding Afrikaner photos)."
+    )
+    parser.add_argument("--epochs-frozen", type=int, default=EPOCHS_FROZEN)
+    parser.add_argument("--epochs-finetune", type=int, default=EPOCHS_FINETUNE)
+    parser.add_argument("--batch", type=int, default=BATCH)
+    parser.add_argument(
+        "--boost-class",
+        default="Afrikaner",
+        help="Extra class-weight multiplier target (default Afrikaner). Empty string to disable.",
+    )
+    parser.add_argument(
+        "--boost-factor",
+        type=float,
+        default=1.4,
+        help="Multiply that class's balanced weight (default 1.4). Use 1.0 for no extra boost.",
+    )
+    parser.add_argument(
+        "--counts-only",
+        action="store_true",
+        help="Print train/test counts and exit (no TensorFlow needed).",
+    )
+    parser.add_argument(
+        "--skip-onnx",
+        action="store_true",
+        help="Skip ONNX export (needs tf2onnx).",
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
     MODELS.mkdir(parents=True, exist_ok=True)
-    train_ds, val_ds = make_datasets()
-    weights = class_weights_from_counts()
+    train_counts = print_dataset_counts()
+    if args.counts_only:
+        return
+
+    import numpy as np
+    import tensorflow as tf
+
+    train_ds, val_ds = make_datasets(args.batch)
+    boost = args.boost_class.strip() if args.boost_class else None
+    weights = class_weights_from_counts(boost, args.boost_factor)
+
+    if train_counts.get("Afrikaner", 0) < 20:
+        print(
+            "\nWARNING: Afrikaner still has few training photos. "
+            "Accuracy for that breed stays low until you add more unique images "
+            f"to {DATA / 'train' / 'Afrikaner'}/ "
+            "(see ingest_extra_photos.py).\n"
+        )
 
     model = build_model(trainable_base=False)
     model.compile(
@@ -138,7 +245,7 @@ def main():
     model.fit(
         train_ds,
         validation_data=val_ds,
-        epochs=EPOCHS_FROZEN,
+        epochs=args.epochs_frozen,
         class_weight=weights,
         callbacks=callbacks,
     )
@@ -156,7 +263,7 @@ def main():
     model.fit(
         train_ds,
         validation_data=val_ds,
-        epochs=EPOCHS_FINETUNE,
+        epochs=args.epochs_finetune,
         class_weight=weights,
         callbacks=callbacks,
     )
@@ -180,7 +287,6 @@ def main():
         encoding="utf-8",
     )
 
-    # Confusion on val
     y_true, y_pred = [], []
     for xb, yb in val_ds:
         probs = model.predict(xb, verbose=0)
@@ -194,12 +300,16 @@ def main():
         mask = y_true == i
         if mask.any():
             print(f"  {name}: {(y_pred[mask] == i).mean():.2f} ({mask.sum()} images)")
+        else:
+            print(f"  {name}: no test images")
 
+    if args.skip_onnx:
+        print("Skipped ONNX export.")
+        return
     try:
         export_onnx(h5_path, MODELS / "breed_classifier.onnx")
     except Exception as exc:
         print("ONNX export failed (will try keras->onnx via alternate):", exc)
-        # Fallback: save and convert with onnxruntime path later
         raise
 
 
