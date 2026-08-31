@@ -1,0 +1,108 @@
+{
+  "test": {
+    "split": "test",
+    "n": 35,
+    "accuracy": 0.9143,
+    "per_class": {
+      "Afrikaner": {
+        "correct": 0,
+        "n": 1,
+        "recall": 0.0
+      },
+      "Boer Goat": {
+        "correct": 4,
+        "n": 4,
+        "recall": 1.0
+      },
+      "Bonsmara": {
+        "correct": 7,
+        "n": 8,
+        "recall": 0.875
+      },
+      "Dorper": {
+        "correct": 12,
+        "n": 12,
+        "recall": 1.0
+      },
+      "Nguni": {
+        "correct": 9,
+        "n": 10,
+        "recall": 0.9
+      }
+    },
+    "confusion": {
+      "Afrikaner": {
+        "Bonsmara": 1
+      },
+      "Boer Goat": {
+        "Boer Goat": 4
+      },
+      "Bonsmara": {
+        "Nguni": 1,
+        "Bonsmara": 7
+      },
+      "Dorper": {
+        "Dorper": 12
+      },
+      "Nguni": {
+        "Bonsmara": 1,
+        "Nguni": 9
+      }
+    }
+  },
+  "train": {
+    "split": "train",
+    "n": 383,
+    "accuracy": 0.9843,
+    "per_class": {
+      "Afrikaner": {
+        "correct": 20,
+        "n": 20,
+        "recall": 1.0
+      },
+      "Boer Goat": {
+        "correct": 41,
+        "n": 42,
+        "recall": 0.976
+      },
+      "Bonsmara": {
+        "correct": 87,
+        "n": 88,
+        "recall": 0.989
+      },
+      "Dorper": {
+        "correct": 177,
+        "n": 179,
+        "recall": 0.989
+      },
+      "Nguni": {
+        "correct": 52,
+        "n": 54,
+        "recall": 0.963
+      }
+    },
+    "confusion": {
+      "Afrikaner": {
+        "Afrikaner": 20
+      },
+      "Boer Goat": {
+        "Boer Goat": 41,
+        "Nguni": 1
+      },
+      "Bonsmara": {
+        "Bonsmara": 87,
+        "Boer Goat": 1
+      },
+      "Dorper": {
+        "Dorper": 177,
+        "Nguni": 1,
+        "Boer Goat": 1
+      },
+      "Nguni": {
+        "Nguni": 52,
+        "Boer Goat": 1,
+        "Dorper": 1
+      }
+    }
+  }
+}

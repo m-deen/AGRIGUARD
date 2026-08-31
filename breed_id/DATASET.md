@@ -30,4 +30,13 @@ python3 breed_id/scripts/retrain_breed_model.py    # writes .h5 + .onnx + class_
 python3 breed_id/scripts/eval_breed_model.py
 ```
 
+After the cleaned retrain (`eval_report.json`):
+
+| Split | Accuracy | Notes |
+|---|---|---|
+| Test (held-out) | **91.4%** (was 73.9% on the dirty labels) | Boer Goat 4/4, Dorper 12/12, Nguni 9/10, Bonsmara 7/8 |
+| Train | 98.4% | Afrikaner 20/20 after cleaning + augs |
+
+The one remaining Afrikaner test photo is a solid-red zebu-type bull that the model calls Bonsmara. That is the same red-cattle lookalike the UI now explains — we still need more true Afrikaner photos (long spreading horns) before Afrikaner hold-out recall will be trustworthy.
+
 Do not add extra CNN classes until there are enough **clean, single-animal** photos of that breed. Kalahari Red, Savanna, Merino and Damara already have care notes; they are not model classes yet.

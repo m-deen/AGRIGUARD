@@ -214,7 +214,9 @@ function logout(){
   localStorage.removeItem('agriguard_role');
   window.location.href = '../login.html';
 }
-function requireLogin(){ if(!getToken()) window.location.href = '../login.html'; }
+function requireLogin(){
+  // Page is usable without Flask (breeds + photo tips). Identify still needs a token.
+}
 
 let toastTimer;
 function toast(msg, type='ok'){
@@ -399,6 +401,11 @@ drop.addEventListener('drop', (e) => {
 file.addEventListener('change', () => setSelectedFile(file.files[0] || null));
 
 async function identify(){
+  if(!getToken()){
+    toast('Log in to run breed identification', 'err');
+    window.location.href = '../login.html';
+    return;
+  }
   if(!selected) return;
   const btn = document.getElementById('btn');
   btn.disabled = true; btn.textContent = 'Identifying…';
