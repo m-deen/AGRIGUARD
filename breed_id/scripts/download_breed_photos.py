@@ -79,6 +79,12 @@ IMAGES_PER_QUERY = 100   # how many images to request per search phrase/engine
 # Several different phrasings per breed = a much bigger combined pool
 # than searching just the breed name once.
 BREED_SEARCH_QUERIES = {
+    "Afrikaner": [
+        "Afrikaner cattle South Africa",
+        "Afrikaner bull long horns",
+        "Afrikaner cow red cattle",
+        "Africander cattle herd farm",
+    ],
     "Nguni": [
         "Nguni cattle South Africa",
         "Nguni bull",
@@ -95,8 +101,15 @@ BREED_SEARCH_QUERIES = {
         "Boer goat South Africa",
         "Boer goat buck",
         "Boer goat doe kid",
-        "Boer goat herd farm",
+        "Boer goat white body brown head",
     ],
+    "Dorper": [
+        "Dorper sheep South Africa",
+        "Dorper ram black head",
+        "Dorper ewe lamb",
+        "Dorper sheep flock farm",
+    ],
+    # Related breeds (not in the current 5-class model — collect for a later expansion)
     "Kalahari Red": [
         "Kalahari Red goat South Africa",
         "Kalahari Red goat buck",
@@ -108,12 +121,6 @@ BREED_SEARCH_QUERIES = {
         "Savanna goat white",
         "Savanna goat herd",
         "Savanna goat farm breed",
-    ],
-    "Dorper": [
-        "Dorper sheep South Africa",
-        "Dorper ram",
-        "Dorper ewe lamb",
-        "Dorper sheep flock farm",
     ],
     "Merino": [
         "Merino sheep South Africa",

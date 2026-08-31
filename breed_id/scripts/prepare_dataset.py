@@ -51,9 +51,12 @@ RAW_PHOTOS_FOLDER = "raw_photos"
 OUTPUT_FOLDER = "dataset_ready"
 
 BREED_FOLDERS = [
-    "Nguni", "Bonsmara", "Angus", "Brahman",       # cattle
-    "Boer Goat", "Kalahari Red", "Savanna Goat",   # goats
-    "Dorper", "Merino", "Damara",                  # sheep
+    "Afrikaner", "Nguni", "Bonsmara",          # cattle in the 5-class model
+    "Boer Goat",                                 # goat in the 5-class model
+    "Dorper",                                    # sheep in the 5-class model
+    "Kalahari Red", "Savanna Goat",              # related goats (future classes)
+    "Merino", "Damara",                          # related sheep
+    "Angus", "Brahman",                          # related cattle
 ]
 
 TARGET_SIZE = (224, 224)          # matches REQ-32 in the SRS
