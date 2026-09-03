@@ -20,8 +20,8 @@ LABELS_PATH = ROOT / "class_labels.json"
 IMG_SIZE = (224, 224)
 BATCH = 16
 SEED = 42
-EPOCHS_FROZEN = 8
-EPOCHS_FINETUNE = 10
+EPOCHS_FROZEN = 6
+EPOCHS_FINETUNE = 8
 # Alphabetical folder order must match inference labels
 CLASS_NAMES = ["Afrikaner", "Boer_Goat", "Bonsmara", "Dorper", "Nguni"]
 DISPLAY_NAMES = ["Afrikaner", "Boer Goat", "Bonsmara", "Dorper", "Nguni"]

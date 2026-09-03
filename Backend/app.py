@@ -3118,7 +3118,7 @@ def api_breed_supported():
     """List breeds the CNN can classify."""
     try:
         _ensure_breed_id_importable()
-        from breed_id import load_class_names, get_backend, BREED_CARE_LIBRARY
+        from breed_id import load_class_names, get_backend, BREED_CARE_LIBRARY, PHOTO_TIPS, RELATED_BREEDS
         data = []
         for name in load_class_names():
             care = BREED_CARE_LIBRARY.get(name, {})
@@ -3126,12 +3126,15 @@ def api_breed_supported():
                 'breed_name': name,
                 'species': care.get('species'),
                 'in_model': True,
+                'related_breeds': RELATED_BREEDS.get(name, []),
             })
         return jsonify({
             'status': 'success',
             'success': True,
             'data': data,
             'backend': get_backend(),
+            'class_count': len(data),
+            'photo_tips': PHOTO_TIPS,
         })
     except Exception as e:
         return jsonify({

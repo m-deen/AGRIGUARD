@@ -28,11 +28,15 @@ d:\PROJECT\AGRIGUARD\venv\Scripts\python.exe standalone_app.py
 
 ## Files
 
+See `DATASET.md` for what the training photos taught us and how to retrain.
+
 | File | Role |
 |------|------|
 | `breed_identification.py` | Validate → preprocess → top-3 + care |
+| `photo_quality.py` | Reject silhouettes / tiny photos |
 | `model_loader.py` | ONNX first, TensorFlow fallback |
 | `class_labels.json` | Class index → breed name |
-| `scripts/` | Download + prepare dataset helpers |
+| `scripts/clean_dataset.py` | Remove wildlife, dairy, generic sheep, etc. |
+| `scripts/` | Download, prepare, retrain, eval |
 
 See `INTEGRATION.md` for details.

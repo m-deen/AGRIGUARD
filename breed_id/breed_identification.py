@@ -19,6 +19,8 @@ from datetime import datetime, timezone
 from PIL import Image, ImageOps
 import numpy as np
 
+from .photo_quality import PHOTO_TIPS, assess_photo_quality_bytes
+
 
 logger = logging.getLogger("agriguard.breed_identification")
 logging.basicConfig(level=logging.INFO)
@@ -411,15 +413,55 @@ def get_top_predictions(raw_probabilities: dict, top_n: int = NUMBER_OF_PREDICTI
     ]
 
 
-def lookalike_note(predictions: list) -> str | None:
-    """Warn when classic Dorper ↔ Boer Goat confusion is likely."""
-    names = {p["breed"] for p in predictions[:3]}
-    if "Dorper" in names and "Boer Goat" in names:
-        return (
+RELATED_BREEDS = {
+    "Afrikaner": ["Bonsmara", "Nguni"],
+    "Bonsmara": ["Afrikaner", "Nguni"],
+    "Nguni": ["Afrikaner", "Bonsmara"],
+    "Boer Goat": ["Kalahari Red", "Savanna Goat", "Dorper"],
+    "Dorper": ["Boer Goat", "Merino"],
+}
+
+
+def lookalike_note(predictions: list, species: str | None = None) -> str | None:
+    """Warn on confusions that showed up in the dataset audit."""
+    names = [p["breed"] for p in predictions[:3]]
+    name_set = set(names)
+    notes = []
+    if "Dorper" in name_set and "Boer Goat" in name_set:
+        notes.append(
             "Dorper sheep and Boer goats often look alike (white body, dark head). "
-            "If you know the species, pick Sheep or Goat above to refine the result."
+            "If you know the species, pick Sheep or Goat to refine the result."
         )
-    return None
+    cattle = [n for n in names if n in {"Afrikaner", "Bonsmara", "Nguni"}]
+    if len(cattle) >= 2:
+        notes.append(
+            "Afrikaner, Bonsmara and Nguni are all South African cattle. "
+            "Solid red with long spreading horns is usually Afrikaner; "
+            "a smooth red beef type is Bonsmara; a speckled or multi-colour hide is Nguni."
+        )
+    if names and names[0] == "Boer Goat":
+        notes.append(
+            "Classic Boer goats have a white body and reddish-brown head. "
+            "A solid red goat may be a Kalahari Red (related meat goat — not a separate "
+            "class in this 5-breed model)."
+        )
+    if names and names[0] == "Nguni" and not species:
+        notes.append(
+            "Nguni coats vary widely. If the animal is solid deep-red with wide "
+            "spreading horns, compare with Afrikaner."
+        )
+    return " ".join(notes) or None
+
+
+def _average_probability_dicts(dicts: list[dict]) -> dict:
+    keys = set()
+    for d in dicts:
+        keys.update(d)
+    out = {}
+    n = len(dicts) or 1
+    for k in keys:
+        out[k] = sum(float(d.get(k, 0.0)) for d in dicts) / n
+    return out
 
 
 def get_care_recommendations(breed_name: str):
@@ -438,26 +480,48 @@ def identify_breed_from_photo(
     """
     try:
         validate_uploaded_image(file_bytes)
+        quality = assess_photo_quality_bytes(file_bytes)
+        if quality.get("level") == "error":
+            return {
+                "success": False,
+                "error": quality.get("message") or "Please upload a clearer livestock photo.",
+                "photo_quality": quality,
+                "photo_tips": PHOTO_TIPS,
+            }
+
         preprocessed = preprocess_image(file_bytes)
         inference_result = run_model_inference(preprocessed, model_predict_fn)
-        probs = filter_probabilities_by_species(
-            inference_result["raw_probabilities"], species
+        # Horizontal-flip TTA — cheap and helped ~2pp on the held-out set.
+        flipped = np.flip(preprocessed, axis=1).copy()
+        tta = run_model_inference(flipped, model_predict_fn)
+        raw = _average_probability_dicts([
+            inference_result["raw_probabilities"],
+            tta["raw_probabilities"],
+        ])
+        elapsed = round(
+            inference_result["inference_time_seconds"] + tta["inference_time_seconds"],
+            3,
         )
+        probs = filter_probabilities_by_species(raw, species)
         top_predictions = get_top_predictions(probs)
 
         top_breed = top_predictions[0]["breed"] if top_predictions else None
         top_confidence = top_predictions[0]["confidence_percent"] if top_predictions else 0
         care_info = get_care_recommendations(top_breed) if top_breed else None
         is_low_confidence = top_confidence < LOW_CONFIDENCE_WARNING_THRESHOLD
+        related = RELATED_BREEDS.get(top_breed or "", [])
 
         return {
             "success": True,
             "predictions": top_predictions,
             "care_recommendations": care_info,
+            "related_breeds": related,
             "low_confidence_warning": is_low_confidence,
-            "lookalike_note": lookalike_note(top_predictions) if not species else None,
+            "lookalike_note": lookalike_note(top_predictions, species),
+            "photo_quality": quality,
+            "photo_tips": PHOTO_TIPS,
             "species_filter": species.strip().title() if species else None,
-            "inference_time_seconds": inference_result["inference_time_seconds"],
+            "inference_time_seconds": elapsed,
             "identified_at": datetime.now(timezone.utc).isoformat(),
         }
 
